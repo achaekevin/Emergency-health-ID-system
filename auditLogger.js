@@ -1,0 +1,33 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Emergency Health ID Backend API",
+  "main": "index.js",
+  "scripts": {
+    "test": "cross-env NODE_ENV=test node --test",
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.78.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
+    "express-validator": "^7.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.2",
+    "multer": "^2.0.2",
+    "pdfkit": "^0.15.0",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "supertest": "^6.3.3"
+  }
+}
