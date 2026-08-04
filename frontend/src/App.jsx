@@ -1,55 +1,108 @@
-/**
- * Generate a unique Health ID for patients
- * Format: EMH-XXXXXX (Emergency Medical Health - 6 digits)
- * Example: EMH-123456
- */
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import Login from './components/Login';
+import Register from './components/Register';
+import PatientDashboard from './components/PatientDashboard';
+import MedicDashboard from './components/MedicDashboard';
+import WelcomeSetup from './components/WelcomeSetup';
+import QRScanner from './components/QRScanner';
+import Documentation from './components/Documentation';
+import OAuthCallback from './components/OAuthCallback';
 
-import Patient from "../models/Patient.js";
+function App() {
+  const { user, isAuthenticated } = useSelector((state) => state.auth || {});
 
-/**
- * Generate a random 6-digit number
- */
-const generateRandomDigits = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-/**
- * Generate a unique Health ID
- * @returns {Promise<string>} Unique Health ID in format EMH-XXXXXX
- */
-export const generateHealthId = async () => {
-  let healthId;
-  let attempts = 0;
-  const maxAttempts = 10;
-
-  do {
-    const digits = generateRandomDigits();
-    healthId = `EMH-${digits}`;
-    
-    // Check if this ID already exists
-    const existing = await Patient.findOne({ healthId });
-    
-    if (!existing) {
-      return healthId;
+  // Protected Route wrapper
+  const ProtectedRoute = ({ children, allowedRoles }) => {
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
     }
-    
-    attempts++;
-    
-    // If we've tried too many times, use timestamp-based approach
-    if (attempts >= maxAttempts) {
-      const timestamp = Date.now().toString().slice(-6);
-      healthId = `EMH-${timestamp}`;
-      const stillExists = await Patient.findOne({ healthId });
-      if (!stillExists) {
-        return healthId;
-      }
-      // Last resort: add random suffix
-      healthId = `EMH-${timestamp}${Math.floor(Math.random() * 100)}`;
-      return healthId;
+
+    if (allowedRoles && !allowedRoles.includes(user?.role)) {
+      return <Navigate to="/" replace />;
     }
-  } while (attempts < maxAttempts);
 
-  // Fallback (should never reach here)
-  return `EMH-${Date.now().toString().slice(-6)}`;
-};
+    return children;
+  };
 
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route 
+        path="/login" 
+        element={
+          isAuthenticated ? <Navigate to="/" replace /> : <Login />
+        } 
+      />
+      <Route 
+        path="/register" 
+        element={
+          isAuthenticated ? <Navigate to="/" replace /> : <Register />
+        } 
+      />
+      <Route path="/auth/callback" element={<OAuthCallback />} />
+
+      {/* Protected Routes */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            {user?.role === 'patient' && <PatientDashboard />}
+            {user?.role === 'medic' && <MedicDashboard />}
+            {!user?.role && <Navigate to="/setup" replace />}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/setup"
+        element={
+          <ProtectedRoute>
+            <WelcomeSetup />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/patient/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={['patient']}>
+            <PatientDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/medic/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={['medic']}>
+            <MedicDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/medic/scanner"
+        element={
+          <ProtectedRoute allowedRoles={['medic']}>
+            <QRScanner />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/documentation"
+        element={
+          <ProtectedRoute>
+            <Documentation />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Fallback Route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+export default App;

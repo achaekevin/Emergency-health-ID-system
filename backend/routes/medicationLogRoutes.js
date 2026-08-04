@@ -1,258 +1,71 @@
-import mongoose from "mongoose";
+import express from 'express';
+import { query } from '../config/db.js';
 
-const patientSchema = new mongoose.Schema(
-  {
-    // ========================
-    // AUTH & ACCOUNT INFO
-    // ========================
-    authId: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-    healthId: {
-      type: String,
-      unique: true,
-      trim: true,
-      uppercase: true,
-      index: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    isEmailVerified: { type: Boolean, default: false },
-    verificationToken: String,
-    verificationTokenExpires: Date,
+const router = express.Router();
 
-    // ========================
-    // BASIC / PERSONAL INFO
-    // ========================
-    basicInfo: {
-      fullName: { type: String, required: true, trim: true },
-      dob: { type: Date },
-      age: { type: String, trim: true }, // ✅ ADDED - Missing from your schema
-      gender: { type: String, enum: ["Male", "Female", "Other"], default: "Other" },
-      height: { type: Number }, // Height in cm for BMI calculation
-      bloodGroup: {
-        type: String,
-        enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"],
-        default: "Unknown",
-      },
-      nationalId: { type: String, trim: true },
-      occupation: { type: String, trim: true },
-      maritalStatus: { type: String, enum: ["Single", "Married", "Divorced", "Widowed"] },
-      profilePhoto: String,
-      contact: {
-        email: String,
-        phone: String,
-      },
-      address: {
-        street: String,
-        city: String,
-        county: String,
-        country: String,
-      },
-    },
-
-    // ========================
-    // EMERGENCY INFO
-    // ========================
-    emergencyInfo: {
-      primaryEmergencyContacts: [
-        {
-          name: String,
-          relation: String,
-          phone: String,
-          email: String,
-          address: String,
-          isPrimary: { type: Boolean, default: false },
-        },
-      ],
-      criticalAllergies: [String],
-      criticalConditions: [String],
-      currentMedications: [String],
-      majorSurgeries: [String],
-      criticalNotes: String,
-      preferredHospitalInEmergency: {
-        name: String,
-        address: String,
-        phone: String,
-      },
-      primaryDoctor: {
-        name: String,
-        hospital: String,
-        contact: String,
-        email: String,
-      },
-    },
-
-    // ========================
-    // MEDICAL INFO
-    // ========================
-    medicalInfo: {
-      immunizations: [
-        {
-          vaccine: String,
-          date: Date,
-          status: { type: String, enum: ["Completed", "Pending"], default: "Completed" },
-        },
-      ],
-      medicalConditions: [
-        {
-          condition: String,
-          diagnosedDate: Date,
-          status: { type: String, enum: ["Active", "Controlled", "Resolved"] },
-          treatment: String,
-        },
-      ],
-      medications: [
-        {
-          name: String,
-          dosage: String,
-          frequency: String,
-          startDate: Date,
-          endDate: Date,
-          prescribedBy: String,
-        },
-      ],
-      surgeries: [
-        {
-          type: String,
-          date: Date,
-          hospital: String,
-          surgeon: String,
-          notes: String,
-        },
-      ],
-      familyMedicalHistory: [
-        {
-          relation: String,
-          condition: String,
-          ageDiagnosed: Number,
-        },
-      ],
-      insurance: {
-        provider: String,
-        policyNumber: String,
-        coverage: String,
-      },
-      lifestyle: {
-        smoking: { type: String, default: "Never" },
-        alcohol: { type: String, default: "Never" },
-        exercise: { type: String, default: "Sedentary" },
-        diet: { type: String, default: "Balanced" },
-        sleep: { type: String, default: "7 hours/night" },
-      },
-      // Health Vitals - Patient self-measurable metrics
-      healthVitals: {
-        bloodPressure: {
-          systolic: { type: Number },
-          diastolic: { type: Number },
-          lastUpdated: { type: Date },
-        },
-        heartRate: {
-          value: { type: Number },
-          unit: { type: String, default: "bpm" },
-          lastUpdated: { type: Date },
-        },
-        weight: {
-          value: { type: Number },
-          unit: { type: String, default: "kg" },
-          lastUpdated: { type: Date },
-        },
-        bmi: {
-          value: { type: Number },
-          lastUpdated: { type: Date },
-        },
-      },
-    },
-
-    // ========================
-    // QR METADATA
-    // ========================
-    qrMetadata: {
-      qrCodeId: { type: String, unique: true, sparse: true },
-      issuedAt: { type: Date, default: Date.now },
-      recordUrl: String,
-      displayFieldsForQr: [String],
-    },
-
-    // ========================
-    // SYSTEM STATUS & CONSENT
-    // ========================
-    profileStatus: {
-      type: String,
-      enum: [
-        "pending_setup",
-        "basic_info_complete",
-        "emergency_info_complete",
-        "medical_info_complete",
-        "active",
-      ],
-      default: "pending_setup",
-    },
-    accountStatus: {
-      type: String,
-      enum: ["active", "suspended", "archived"],
-      default: "active",
-    },
-    consent: {
-      dataSharing: { type: Boolean, default: false },
-      researchParticipation: { type: Boolean, default: false },
-      emergencyContactAllowed: { type: Boolean, default: true },
-      smsNotifications: { type: Boolean, default: true },
-      emailNotifications: { type: Boolean, default: true },
-    },
-
-    // ========================
-    // AUDIT FIELDS
-    // ========================
-    createdBy: { type: String, default: "system" },
-    lastUpdatedBy: {
-      userType: { type: String, enum: ["patient", "medic", "admin"] },
-      authId: String,
-      timestamp: { type: Date, default: Date.now },
-    },
-  },
-  { timestamps: true }
-);
-
-// ========================
-// INDEXES & VIRTUALS
-// ========================
-patientSchema.index({ authId: 1 });
-patientSchema.index({ email: 1 });
-patientSchema.index({ "basicInfo.fullName": 1 });
-patientSchema.index({ "emergencyInfo.primaryDoctor.name": 1 });
-patientSchema.index({ "medicalInfo.insurance.provider": 1 });
-
-// Virtual for age calculation (if using dob)
-patientSchema.virtual("age").get(function () {
-  if (!this.basicInfo?.dob) return null;
-  const today = new Date();
-  const birthDate = new Date(this.basicInfo.dob);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-  return age.toString(); // Return as string to match your document format
+// Get medication logs for a patient
+router.get('/patient/:patientId', async (req, res) => {
+  try {
+    const medications = await query(
+      'SELECT * FROM medication_logs WHERE patient_id = ? ORDER BY start_date DESC',
+      [req.params.patientId]
+    );
+    res.json({ success: true, data: medications });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
-// Virtual to ensure age field is included in JSON output
-patientSchema.set('toJSON', { virtuals: true });
-patientSchema.set('toObject', { virtuals: true });
+// Get active medications for a patient
+router.get('/patient/:patientId/active', async (req, res) => {
+  try {
+    const medications = await query(
+      'SELECT * FROM medication_logs WHERE patient_id = ? AND status = ? ORDER BY start_date DESC',
+      [req.params.patientId, 'active']
+    );
+    res.json({ success: true, data: medications });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
-// Add indexes for frequently queried fields
-patientSchema.index({ authId: 1 }, { unique: true });
-patientSchema.index({ email: 1 });
-patientSchema.index({ 'basicInfo.bloodGroup': 1 });
-patientSchema.index({ 'emergencyInfo.criticalAllergies': 1 });
-patientSchema.index({ 'emergencyInfo.criticalConditions': 1 });
-patientSchema.index({ 'medicalInfo.medicalConditions.condition': 1 });
-patientSchema.index({ createdAt: -1 });
-patientSchema.index({ updatedAt: -1 });
+// Create medication log
+router.post('/', async (req, res) => {
+  try {
+    const { patient_id, medic_id, medication_name, dosage, frequency, route, start_date, end_date, purpose, status } = req.body;
+    const result = await query(
+      `INSERT INTO medication_logs (patient_id, medic_id, medication_name, dosage, frequency, route, start_date, end_date, purpose, status) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [patient_id, medic_id || null, medication_name, dosage || null, frequency || null, route || null, start_date, end_date || null, purpose || null, status || 'active']
+    );
+    res.status(201).json({ success: true, data: { id: result.insertId } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
-const Patient = mongoose.model("Patient", patientSchema);
-export default Patient;
+// Update medication log
+router.put('/:id', async (req, res) => {
+  try {
+    const updates = req.body;
+    const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+    const values = [...Object.values(updates), req.params.id];
+    
+    await query(`UPDATE medication_logs SET ${fields} WHERE id = ?`, values);
+    res.json({ success: true, message: 'Medication log updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete medication log
+router.delete('/:id', async (req, res) => {
+  try {
+    await query('DELETE FROM medication_logs WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Medication log deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+export default router;

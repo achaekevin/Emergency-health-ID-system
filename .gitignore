@@ -80,6 +80,12 @@ credentials/
 *.cert
 *.p12
 *.pfx
+LOGIN_CREDENTIALS.md
+CREDENTIALS.md
+*_CREDENTIALS.md
+
+# Documentation with sensitive info
+DATABASE_SCHEMA.md
 
 # Backup files
 *.backup
