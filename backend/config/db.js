@@ -1,24 +1,49 @@
-import mongoose from 'mongoose';
+import mysql from 'mysql2/promise';
+
+let pool;
 
 export const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGO_URI;
-    
-    if (!mongoURI) {
-      console.error('MONGO_URI is not defined in environment variables');
-      process.exit(1);
-    }
-
-    const conn = await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+    // Create connection pool
+    pool = mysql.createPool({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'emergency_digital_health_id_system_db',
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0
     });
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    // Test connection
+    const connection = await pool.getConnection();
+    console.log(`MySQL Connected: ${connection.config.host}`);
+    connection.release();
+
+    return pool;
   } catch (error) {
-    console.error(`Error connecting to MongoDB: ${error.message}`);
+    console.error(`Error connecting to MySQL: ${error.message}`);
     process.exit(1);
   }
 };
 
-export default connectDB;
+export const getDB = () => {
+  if (!pool) {
+    throw new Error('Database not initialized. Call connectDB first.');
+  }
+  return pool;
+};
+
+export const query = async (sql, params) => {
+  try {
+    const [results] = await pool.execute(sql, params);
+    return results;
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
+  }
+};
+
+export default { connectDB, getDB, query };

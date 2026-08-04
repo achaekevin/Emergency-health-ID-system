@@ -11,12 +11,30 @@ coverage/
 dist/
 build/
 
-# Environment files
+# Environment files - NEVER COMMIT THESE
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+*.env
+backend/.env
+frontend/.env
+
+# Database files - NEVER COMMIT ANY DATABASE FILES
+database/
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+*.mdb
+*.accdb
+database.json
+db-backup/
+backups/
 
 # Editor directories and files
 .vscode/
@@ -28,8 +46,9 @@ build/
 *.sw?
 .DS_Store
 
-# Uploads
+# Uploads and user data
 uploads/
+user-uploads/
 *.jpg
 *.jpeg
 *.png
@@ -37,7 +56,7 @@ uploads/
 *.pdf
 
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -52,3 +71,21 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
+
+# Secrets and sensitive files
+secrets/
+credentials/
+*.key
+*.pem
+*.cert
+*.p12
+*.pfx
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Lock files (optional - uncomment if you want to ignore them)
+# package-lock.json
+# yarn.lock
