@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import UserProfileManager from './UserProfileManager';
+
 
 function AdminDashboard() {
   const { user } = useSelector((state) => state.auth || {});
@@ -110,12 +112,16 @@ function AdminDashboard() {
         {/* Sidebar */}
         <div className="dashboard-sidebar">
           <div className="sidebar-section-title">Overview & Users</div>
+          <button className={`sidebar-nav-btn ${activeTab === 'my_profile' ? 'active' : ''}`} onClick={() => setActiveTab('my_profile')}>
+            👤 My Admin Profile & Credentials
+          </button>
           <button className={`sidebar-nav-btn ${activeTab === 'executive' ? 'active' : ''}`} onClick={() => setActiveTab('executive')}>
             📊 Executive Dashboard
           </button>
           <button className={`sidebar-nav-btn ${activeTab === 'user_management' ? 'active' : ''}`} onClick={() => setActiveTab('user_management')}>
             👥 User Management
           </button>
+
           <button className={`sidebar-nav-btn ${activeTab === 'verification_center' ? 'active' : ''}`} onClick={() => setActiveTab('verification_center')}>
             🛡️ Verification Center ({stats.pendingVerifications})
           </button>
@@ -158,8 +164,14 @@ function AdminDashboard() {
         {/* Content Area */}
         <div className="dashboard-main-content">
 
+          {/* TAB 0: MY ADMIN PROFILE & CREDENTIALS */}
+          {activeTab === 'my_profile' && (
+            <UserProfileManager />
+          )}
+
           {/* TAB 1: EXECUTIVE DASHBOARD */}
           {activeTab === 'executive' && (
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div className="grid-4">
                 <div className="dash-card" style={{ borderLeft: '4px solid #0284c7' }}>

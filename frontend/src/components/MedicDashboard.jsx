@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import QRScannerModal from './QRScannerModal';
+import UserProfileManager from './UserProfileManager';
+
 
 function MedicDashboard() {
   const { user } = useSelector((state) => state.auth || {});
@@ -560,33 +562,11 @@ function MedicDashboard() {
             </div>
           )}
 
-          {/* TAB 11: PROFESSIONAL PROFILE */}
+          {/* TAB 11: PROFESSIONAL PROFILE & CREDENTIALS */}
           {activeTab === 'profile' && (
-            <div className="dash-card">
-              <h3 className="card-title">🩺 Edit Professional Profile</h3>
-              <form onSubmit={(e) => { e.preventDefault(); alert('Medic Profile updated!'); }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Full Name</label>
-                  <input type="text" defaultValue={user?.fullName || 'Dr. Sarah Johnson'} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Medical License Number</label>
-                  <input type="text" readOnly defaultValue={user?.license_number || 'MED-2024-12345'} style={{ width: '100%', padding: '0.6rem', background: '#f1f5f9', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Specialty</label>
-                  <input type="text" defaultValue="Emergency Medicine & Critical Care" style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Hospital Affiliation</label>
-                  <input type="text" defaultValue="City General Hospital" style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <button type="submit" className="btn-primary">💾 Save Profile Changes</button>
-                </div>
-              </form>
-            </div>
+            <UserProfileManager />
           )}
+
 
           {/* TAB 12: NOTIFICATIONS */}
           {activeTab === 'notifications' && (

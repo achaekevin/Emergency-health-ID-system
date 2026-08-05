@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import HealthIDCard from './HealthIDCard';
+import UserProfileManager from './UserProfileManager';
+
 
 function PatientDashboard() {
   const { user } = useSelector((state) => state.auth || {});
@@ -269,58 +271,11 @@ function PatientDashboard() {
             </div>
           )}
 
-          {/* TAB 3: PERSONAL PROFILE */}
+          {/* TAB 3: PERSONAL PROFILE & CREDENTIALS */}
           {activeTab === 'profile' && (
-            <div className="dash-card">
-              <h3 className="card-title">👤 Edit Personal Profile</h3>
-              <form onSubmit={(e) => { e.preventDefault(); alert('Profile updated successfully!'); }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Full Name</label>
-                  <input type="text" value={patientData.full_name} onChange={(e) => setPatientData({ ...patientData, full_name: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>National ID / Passport</label>
-                  <input type="text" value={patientData.national_id} onChange={(e) => setPatientData({ ...patientData, national_id: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Date of Birth</label>
-                  <input type="date" value={patientData.dob} onChange={(e) => setPatientData({ ...patientData, dob: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Gender</label>
-                  <select value={patientData.gender} onChange={(e) => setPatientData({ ...patientData, gender: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Blood Group</label>
-                  <select value={patientData.blood_group} onChange={(e) => setPatientData({ ...patientData, blood_group: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                    <option value="A+">A+</option><option value="A-">A-</option>
-                    <option value="B+">B+</option><option value="B-">B-</option>
-                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                    <option value="O+">O+</option><option value="O-">O-</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Organ Donor Status</label>
-                  <input type="text" value={patientData.organ_donor} onChange={(e) => setPatientData({ ...patientData, organ_donor: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Insurance Provider</label>
-                  <input type="text" value={patientData.insurance_provider} onChange={(e) => setPatientData({ ...patientData, insurance_provider: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Insurance Policy Number</label>
-                  <input type="text" value={patientData.insurance_policy} onChange={(e) => setPatientData({ ...patientData, insurance_policy: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div style={{ gridColumn: 'span 2', marginTop: '1rem' }}>
-                  <button type="submit" className="btn-primary">💾 Save Profile Changes</button>
-                </div>
-              </form>
-            </div>
+            <UserProfileManager />
           )}
+
 
           {/* TAB 4: MEDICAL INFORMATION */}
           {activeTab === 'medical_info' && (

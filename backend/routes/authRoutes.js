@@ -372,4 +372,118 @@ router.post('/change-password', async (req, res) => {
   }
 });
 
+// Update owner login email / username credentials
+router.put('/profile/credentials', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'No authorization token provided' });
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { newEmail, currentPassword } = req.body;
+
+    if (!newEmail || !currentPassword) {
+      return res.status(400).json({ success: false, message: 'New email and current password are required' });
+    }
+
+    // Verify current user
+    const [user] = await query('SELECT auth_id, password_hash, role FROM profiles WHERE auth_id = ?', [decoded.authId]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User account not found' });
+    }
+
+    // Verify current password
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ success: false, message: 'Current password verification failed' });
+    }
+
+    // Check if new email is already in use by another account
+    const [existing] = await query('SELECT auth_id FROM profiles WHERE email = ? AND auth_id != ?', [newEmail, decoded.authId]);
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Email address is already in use by another account' });
+    }
+
+    // Update profiles table
+    await query('UPDATE profiles SET email = ?, updated_at = NOW() WHERE auth_id = ?', [newEmail, decoded.authId]);
+
+    // Update role tables if applicable
+    if (user.role === 'patient') {
+      await query('UPDATE patients SET email = ?, updated_at = NOW() WHERE auth_id = ?', [newEmail, decoded.authId]);
+    } else if (user.role === 'medic') {
+      await query('UPDATE medics SET email = ?, updated_at = NOW() WHERE auth_id = ?', [newEmail, decoded.authId]);
+    }
+
+    res.json({
+      success: true,
+      message: 'Login credentials (email) updated successfully by account owner!',
+      email: newEmail
+    });
+  } catch (error) {
+    console.error('Update credentials error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update credentials', error: error.message });
+  }
+});
+
+// Update owner personal profile details
+router.put('/profile/details', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'No authorization token provided' });
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { fullName, phone, specialization, hospitalAffiliation, bloodGroup, dob, gender } = req.body;
+
+    const [user] = await query('SELECT role FROM profiles WHERE auth_id = ?', [decoded.authId]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User account not found' });
+    }
+
+    if (user.role === 'patient') {
+      await query(
+        `UPDATE patients SET 
+          full_name = COALESCE(?, full_name),
+          date_of_birth = COALESCE(?, date_of_birth),
+          gender = COALESCE(?, gender),
+          blood_group = COALESCE(?, blood_group),
+          updated_at = NOW()
+         WHERE auth_id = ?`,
+        [fullName, dob, gender, bloodGroup, decoded.authId]
+      );
+    } else if (user.role === 'medic') {
+      await query(
+        `UPDATE medics SET 
+          full_name = COALESCE(?, full_name),
+          specialization = COALESCE(?, specialization),
+          hospital_affiliation = COALESCE(?, hospital_affiliation),
+          updated_at = NOW()
+         WHERE auth_id = ?`,
+        [fullName, specialization, hospitalAffiliation, decoded.authId]
+      );
+    } else if (user.role === 'admin') {
+      await query(
+        `UPDATE admin_settings SET 
+          full_name = COALESCE(?, full_name),
+          updated_at = NOW()
+         WHERE auth_id = ?`,
+        [fullName, decoded.authId]
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Personal profile information updated successfully!'
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update profile', error: error.message });
+  }
+});
+
 export default router;
+
