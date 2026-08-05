@@ -106,40 +106,6 @@ const seedUsers = async () => {
       console.log('✅ Medic user details created: medic@test.com');
     }
 
-    // 4. Create Additional Test Patient
-    const [existingJane] = await query('SELECT id FROM profiles WHERE email = ?', ['jane@test.com']);
-    if (!existingJane) {
-      console.log('\nCreating additional Patient user...');
-      await query(
-        `INSERT INTO profiles (auth_id, role, email, password_hash, created_at, updated_at)
-         VALUES (?, ?, ?, ?, NOW(), NOW())`,
-        ['auth_patient_002', 'patient', 'jane@test.com', hashedPassword]
-      );
-    }
-    const [janeRow] = await query('SELECT id FROM patients WHERE auth_id = ?', ['auth_patient_002']);
-    if (!janeRow) {
-      await query(
-        `INSERT INTO patients (
-          auth_id, health_id, full_name, date_of_birth, age, gender, blood_group,
-          medical_conditions, allergies, current_medications, is_active, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-        [
-          'auth_patient_002',
-          'EMH-100002',
-          'Jane Smith',
-          '1985-08-22',
-          39,
-          'Female',
-          'O-',
-          JSON.stringify(['Asthma']),
-          JSON.stringify(['Latex', 'Sulfa drugs']),
-          JSON.stringify(['Albuterol Inhaler']),
-          true
-        ]
-      );
-      console.log('✅ Patient user details created: jane@test.com (EMH-100002)');
-    }
-
     // Display summary
     console.log('\n' + '='.repeat(60));
     console.log('📋 TEST USER CREDENTIALS');
@@ -156,22 +122,18 @@ const seedUsers = async () => {
     console.log('   Specialization: Emergency Medicine');
     console.log('   License: MED-2024-12345\n');
     
-    console.log('🙍 PATIENTS:');
-    console.log('   1. Email: patient@test.com');
-    console.log('      Name: John Doe');
-    console.log('      Health ID: EMH-100001');
-    console.log('      Blood Group: A+\n');
-    
-    console.log('   2. Email: jane@test.com');
-    console.log('      Name: Jane Smith');
-    console.log('      Health ID: EMH-100002');
-    console.log('      Blood Group: O-\n');
+    console.log('🙍 PATIENT:');
+    console.log('   Email: patient@test.com');
+    console.log('   Name: John Doe');
+    console.log('   Health ID: EMH-100001');
+    console.log('   Blood Group: A+\n');
     
     console.log('='.repeat(60));
     console.log('✅ Database seeding completed successfully!');
     console.log('='.repeat(60));
 
     process.exit(0);
+
   } catch (error) {
     console.error('\n❌ Error seeding database:', error);
     process.exit(1);

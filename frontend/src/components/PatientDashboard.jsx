@@ -49,20 +49,73 @@ function PatientDashboard() {
     }
   });
 
-  const [emergencyContacts, setEmergencyContacts] = useState([
-    { id: 1, name: 'Sarah Doe', relationship: 'Spouse', phone: '+1 (555) 234-5678', priority: 1, is_primary: true },
-    { id: 2, name: 'Robert Doe', relationship: 'Brother', phone: '+1 (555) 876-5432', priority: 2, is_primary: false }
-  ]);
+  const [emergencyContacts, setEmergencyContacts] = useState([]);
+  const [medicationLogs, setMedicationLogs] = useState([]);
+  const [medicalHistory, setMedicalHistory] = useState([]);
 
-  const [medicationLogs, setMedicationLogs] = useState([
-    { id: 1, medication_name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', start_date: '2025-01-10', end_date: 'Continuous', reminder: true, status: 'active' },
-    { id: 2, medication_name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily (Morning)', start_date: '2025-03-15', end_date: 'Continuous', reminder: true, status: 'active' }
-  ]);
+  useEffect(() => {
+    if (user) {
+      fetchRealPatientData();
+    }
+  }, [user]);
 
-  const [medicalHistory] = useState([
-    { id: 1, date: '2026-06-15', doctor: 'Dr. Sarah Johnson', facility: 'City General Hospital', type: 'Clinical Encounter', diagnosis: 'Type 2 Diabetes controlled', prescription: 'Metformin 500mg', notes: 'Routine checkup. Blood glucose stable.' },
-    { id: 2, date: '2026-07-20', doctor: 'Dr. Marcus Vance', facility: 'St. Jude Emergency Center', type: 'Emergency Response', diagnosis: 'Mild Hypertension Spurt', prescription: 'Lisinopril 10mg', notes: 'Patient arrived with elevated BP. Stabilized within 2 hours.' }
-  ]);
+  const fetchRealPatientData = async () => {
+    try {
+      const patientId = user?.profileId || user?.id || 1;
+      const authId = user?.auth_id || user?.authId || 'auth_patient_001';
+
+      // 1. Fetch Patient Info
+      const pRes = await fetch(`http://localhost:5000/api/patients/auth/${authId}`);
+      const pData = await pRes.json();
+      if (pData.success && pData.data) {
+        const p = pData.data;
+        setPatientData(prev => ({
+          ...prev,
+          id: p.id || prev.id,
+          full_name: p.full_name || user?.fullName || prev.full_name,
+          health_id: p.health_id || user?.healthId || prev.health_id,
+          dob: p.date_of_birth ? p.date_of_birth.slice(0, 10) : (p.dob || prev.dob),
+          gender: p.gender || prev.gender,
+          blood_group: p.blood_group || prev.blood_group,
+          allergies: p.allergies ? (Array.isArray(p.allergies) ? p.allergies : JSON.parse(p.allergies)) : prev.allergies,
+          medical_conditions: p.medical_conditions ? (Array.isArray(p.medical_conditions) ? p.medical_conditions : JSON.parse(p.medical_conditions)) : prev.medical_conditions,
+        }));
+      }
+
+      // 2. Fetch Emergency Contacts
+      const cRes = await fetch(`http://localhost:5000/api/emergency-contacts/patient/${patientId}`);
+      const cData = await cRes.json();
+      if (cData.success && Array.isArray(cData.data)) {
+        setEmergencyContacts(cData.data);
+      }
+
+      // 3. Fetch Medication Logs
+      const mRes = await fetch(`http://localhost:5000/api/medication-log/patient/${patientId}`);
+      const mData = await mRes.json();
+      if (mData.success && Array.isArray(mData.data)) {
+        setMedicationLogs(mData.data);
+      }
+
+      // 4. Fetch Medical Records / History
+      const rRes = await fetch(`http://localhost:5000/api/records/patient/${patientId}`);
+      const rData = await rRes.json();
+      if (rData.success && Array.isArray(rData.data)) {
+        setMedicalHistory(rData.data.map(r => ({
+          id: r.id,
+          date: r.record_date ? r.record_date.slice(0, 10) : '2026-08-01',
+          doctor: r.attending_medic || 'Dr. Medical Professional',
+          facility: r.hospital_name || 'City General Hospital',
+          type: 'Clinical Encounter',
+          diagnosis: r.diagnosis || 'Clinical Diagnosis',
+          prescription: r.prescription || 'Prescribed Therapy',
+          notes: r.clinical_notes || r.symptoms || 'Encounters recorded to chart.'
+        })));
+      }
+    } catch (err) {
+      console.warn('Real patient data fetch notice:', err);
+    }
+  };
+
 
   const [documents, setDocuments] = useState([
     { id: 1, title: 'Prescription_Metformin_2026.pdf', category: 'Prescription', uploaded_at: '2026-06-15', size: '240 KB' },
@@ -163,12 +216,10 @@ function PatientDashboard() {
           <button className={`sidebar-nav-btn ${activeTab === 'my_health_id' ? 'active' : ''}`} onClick={() => setActiveTab('my_health_id')}>
             🪪 My Health ID
           </button>
-          <button className={`sidebar-nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
-            👤 Personal Profile
-          </button>
           <button className={`sidebar-nav-btn ${activeTab === 'medical_info' ? 'active' : ''}`} onClick={() => setActiveTab('medical_info')}>
             🩺 Medical Information
           </button>
+
           <button className={`sidebar-nav-btn ${activeTab === 'medical_history' ? 'active' : ''}`} onClick={() => setActiveTab('medical_history')}>
             📋 Medical History (Read Only)
           </button>
@@ -287,8 +338,22 @@ function PatientDashboard() {
 
           {/* TAB 3: PERSONAL PROFILE & CREDENTIALS */}
           {activeTab === 'profile' && (
-            <UserProfileManager />
+            <UserProfileManager 
+              onSaveSuccess={(updated) => {
+                if (updated) {
+                  setPatientData(prev => ({
+                    ...prev,
+                    full_name: updated.fullName || updated.full_name || prev.full_name,
+                    dob: updated.dob || prev.dob,
+                    gender: updated.gender || prev.gender,
+                    blood_group: updated.bloodGroup || updated.blood_group || prev.blood_group
+                  }));
+                }
+                setActiveTab('home');
+              }} 
+            />
           )}
+
 
 
           {/* TAB 4: MEDICAL INFORMATION */}

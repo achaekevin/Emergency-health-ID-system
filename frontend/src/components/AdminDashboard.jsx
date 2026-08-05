@@ -11,32 +11,83 @@ function AdminDashboard() {
   const [userMgmtSubTab, setUserMgmtSubTab] = useState('patients');
 
   // Stats
-  const [stats] = useState({
-    totalPatients: 1420,
-    activePatients: 1390,
-    totalMedics: 84,
-    pendingVerifications: 5,
-    totalScans: 4820,
-    todayScans: 142,
-    monthlyRegistrations: 185,
-    systemUptime: '99.98%'
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    activePatients: 0,
+    totalMedics: 0,
+    pendingVerifications: 0,
+    totalScans: 0,
+    todayScans: 0,
+    monthlyRegistrations: 0,
+    systemUptime: '99.99%'
   });
 
   // Users Registry State
-  const [patients, setPatients] = useState([
-    { id: 1, authId: 'p1', healthId: 'EMH-100001', name: 'John Doe', email: 'patient@test.com', status: 'Active', dob: '1990-05-14', created: '2026-01-10' },
-    { id: 2, authId: 'p2', healthId: 'EMH-100002', name: 'Jane Smith', email: 'jane@test.com', status: 'Active', dob: '1985-11-20', created: '2026-02-15' },
-    { id: 3, authId: 'p3', healthId: 'EMH-100003', name: 'Michael Brown', email: 'mbrown@test.com', status: 'Suspended', dob: '1978-03-05', created: '2026-03-01' }
-  ]);
+  const [patients, setPatients] = useState([]);
+  const [medics, setMedics] = useState([]);
+  const [admins, setAdmins] = useState([]);
 
-  const [medics, setMedics] = useState([
-    { id: 1, authId: 'm1', name: 'Dr. Sarah Johnson', email: 'medic@test.com', license: 'MED-2024-12345', hospital: 'City General Hospital', isVerified: true, status: 'Active' },
-    { id: 2, authId: 'm2', name: 'Dr. Marcus Vance', email: 'marcus@hospital.org', license: 'MED-2025-99812', hospital: 'St. Jude ER', isVerified: false, status: 'Pending Verification' }
-  ]);
+  useEffect(() => {
+    fetchAdminData();
+  }, []);
 
-  const [admins, setAdmins] = useState([
-    { id: 1, authId: 'a1', name: 'System Administrator', email: 'admin@edhis.com', role: 'Super Admin', status: 'Active' }
-  ]);
+  const fetchAdminData = async () => {
+    try {
+      // Fetch Real System Stats
+      const statsRes = await fetch('http://localhost:5000/api/admin/stats');
+      const statsData = await statsRes.json();
+      if (statsData.success && statsData.data) {
+        setStats(prev => ({
+          ...prev,
+          totalPatients: statsData.data.totalPatients || 0,
+          activePatients: statsData.data.totalPatients || 0,
+          totalMedics: statsData.data.totalMedics || 0,
+          pendingVerifications: (statsData.data.totalMedics || 0) - (statsData.data.verifiedMedics || 0),
+          totalScans: statsData.data.totalScans || 0,
+          todayScans: statsData.data.totalScans || 0
+        }));
+      }
+
+      // Fetch Real Users List
+      const usersRes = await fetch('http://localhost:5000/api/admin/users');
+      const usersData = await usersRes.json();
+      if (usersData.success && Array.isArray(usersData.data)) {
+        const realUsers = usersData.data;
+        setPatients(realUsers.filter(u => u.role === 'patient').map((u, i) => ({
+          id: u.patientId || i + 1,
+          authId: u.authId,
+          healthId: u.healthId || 'EMH-100001',
+          name: u.fullName || 'Patient User',
+          email: u.email,
+          status: u.isActive ? 'Active' : 'Suspended',
+          created: u.createdAt ? u.createdAt.slice(0, 10) : '2026-08-01'
+        })));
+
+        setMedics(realUsers.filter(u => u.role === 'medic').map((u, i) => ({
+          id: u.medicId || i + 1,
+          authId: u.authId,
+          name: u.fullName || 'Dr. Medical Professional',
+          email: u.email,
+          license: u.licenseNumber || 'MED-2024-12345',
+          hospital: u.hospital || 'City General Hospital',
+          isVerified: Boolean(u.isVerified),
+          status: u.isVerified ? 'Active' : 'Pending Verification'
+        })));
+
+        setAdmins(realUsers.filter(u => u.role === 'admin').map((u, i) => ({
+          id: i + 1,
+          authId: u.authId,
+          name: u.fullName || 'System Administrator',
+          email: u.email,
+          role: 'Super Admin',
+          status: 'Active'
+        })));
+      }
+    } catch (err) {
+      console.warn('Real admin data load error, using fallbacks:', err);
+    }
+  };
+
 
   const [auditLogs] = useState([
     { id: 1, user: 'Dr. Sarah Johnson', role: 'Medic', action: 'QR Triage Scan', target: 'EMH-100001', ip: '192.168.1.45', timestamp: '2026-08-05 09:10 EST', status: 'Success' },
@@ -67,7 +118,92 @@ function AdminDashboard() {
     alert('Medical Professional license verified and account activated!');
   };
 
+  const handleExportPatientsCSV = () => {
+    if (!patients || patients.length === 0) {
+      alert('No patient records available to export.');
+      return;
+    }
+    let csvContent = 'data:text/csv;charset=utf-8,';
+    csvContent += 'Health ID,Full Name,Email,Blood Group,Status,Date Registered\n';
+    patients.forEach(p => {
+      csvContent += `"${p.healthId || 'EMH-100001'}","${p.name || ''}","${p.email || ''}","${p.bloodGroup || 'A+'}","${p.status || 'Active'}","${p.created || ''}"\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `EDHIS_Patients_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPatientsPDF = (targetPatient = null) => {
+    const reportTitle = targetPatient ? `Patient Medical Report — ${targetPatient.name} (${targetPatient.healthId})` : 'All System Patients Summary Report';
+    const printWindow = window.open('', '_blank');
+    const pList = targetPatient ? [targetPatient] : patients;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${reportTitle}</title>
+          <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 2rem; color: #0f172a; }
+            .header { text-align: center; border-bottom: 2px solid #0284c7; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+            h1 { color: #0284c7; font-size: 1.5rem; margin: 0; }
+            .subtitle { color: #64748b; font-size: 0.85rem; font-weight: 600; margin-top: 0.25rem; }
+            table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+            th { background: #0284c7; color: #ffffff; padding: 0.6rem; text-align: left; font-size: 0.85rem; }
+            td { border-bottom: 1px solid #cbd5e1; padding: 0.6rem; font-size: 0.85rem; }
+            .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; background: #dcfce7; color: #166534; }
+            .footer { margin-top: 2rem; text-align: center; font-size: 0.75rem; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>EMERGENCY HEALTH ID SYSTEM — PATIENTS REPORT</h1>
+            <div class="subtitle">System Administration Record • Generated: ${new Date().toLocaleString()}</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Health ID</th>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Blood Group</th>
+                <th>Account Status</th>
+                <th>Date Registered</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pList.map(p => `
+                <tr>
+                  <td><strong>${p.healthId || 'EMH-100001'}</strong></td>
+                  <td>${p.name}</td>
+                  <td>${p.email}</td>
+                  <td>${p.bloodGroup || 'A+'}</td>
+                  <td><span class="badge">${p.status}</span></td>
+                  <td>${p.created || '2026-08-01'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="footer">
+            Confidential Emergency Health Record Document • EDHIS Platform Governance
+          </div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   const handleCreateAdmin = (e) => {
+
     e.preventDefault();
     setAdmins([...admins, { id: Date.now(), authId: `a_${Date.now()}`, ...newAdmin, status: 'Active' }]);
     setNewAdmin({ name: '', email: '', role: 'Admin' });
@@ -112,12 +248,10 @@ function AdminDashboard() {
         {/* Sidebar */}
         <div className="dashboard-sidebar">
           <div className="sidebar-section-title">Overview & Users</div>
-          <button className={`sidebar-nav-btn ${activeTab === 'my_profile' ? 'active' : ''}`} onClick={() => setActiveTab('my_profile')}>
-            👤 My Admin Profile & Credentials
-          </button>
           <button className={`sidebar-nav-btn ${activeTab === 'executive' ? 'active' : ''}`} onClick={() => setActiveTab('executive')}>
             📊 Executive Dashboard
           </button>
+
           <button className={`sidebar-nav-btn ${activeTab === 'user_management' ? 'active' : ''}`} onClick={() => setActiveTab('user_management')}>
             👥 User Management
           </button>
@@ -166,8 +300,13 @@ function AdminDashboard() {
 
           {/* TAB 0: MY ADMIN PROFILE & CREDENTIALS */}
           {activeTab === 'my_profile' && (
-            <UserProfileManager />
+            <UserProfileManager 
+              onSaveSuccess={() => {
+                setActiveTab('executive');
+              }} 
+            />
           )}
+
 
           {/* TAB 1: EXECUTIVE DASHBOARD */}
           {activeTab === 'executive' && (
@@ -401,33 +540,85 @@ function AdminDashboard() {
             </div>
           )}
 
-          {/* TAB 6: REPORTS */}
+          {/* TAB 6: PATIENT REPORTS & EXPORT CENTER */}
           {activeTab === 'reports' && (
-            <div className="dash-card">
-              <h3 className="card-title">📥 System Reports Generator & Data Export</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <h4>Patient Health & Demographics Summary</h4>
-                  <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.5rem 0 1rem' }}>Export overall patient registration, blood group distribution, and chronic condition statistics.</p>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => handleExportReport('Patient Demographics', 'PDF')} className="btn-primary" style={{ fontSize: '0.75rem' }}>PDF</button>
-                    <button onClick={() => handleExportReport('Patient Demographics', 'CSV')} className="btn-secondary" style={{ fontSize: '0.75rem' }}>CSV</button>
-                    <button onClick={() => handleExportReport('Patient Demographics', 'Excel')} className="btn-secondary" style={{ fontSize: '0.75rem' }}>Excel</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="dash-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <h3 className="card-title" style={{ margin: 0 }}>📊 All System Patients Medical Reports Center</h3>
+                    <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.25rem 0 0' }}>
+                      Generate, view, and export overall or individual patient reports in formatted <strong>PDF</strong> or <strong>Excel / CSV</strong> spreadsheet formats.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => handleExportPatientsPDF()} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      📄 View & Print All (PDF)
+                    </button>
+                    <button onClick={handleExportPatientsCSV} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#16a34a', color: '#fff', border: 'none' }}>
+                      📊 Export All (Excel / CSV)
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <h4>Emergency QR Scan Audit Report</h4>
-                  <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.5rem 0 1rem' }}>Detailed log of all emergency triage scans, hospital response times, and doctor access.</p>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => handleExportReport('QR Scan Audit', 'PDF')} className="btn-primary" style={{ fontSize: '0.75rem' }}>PDF</button>
-                    <button onClick={() => handleExportReport('QR Scan Audit', 'CSV')} className="btn-secondary" style={{ fontSize: '0.75rem' }}>CSV</button>
-                    <button onClick={() => handleExportReport('QR Scan Audit', 'Excel')} className="btn-secondary" style={{ fontSize: '0.75rem' }}>Excel</button>
-                  </div>
+                <table className="custom-table">
+                  <thead>
+                    <tr>
+                      <th>Health ID</th>
+                      <th>Patient Full Name</th>
+                      <th>Email Address</th>
+                      <th>Blood Group</th>
+                      <th>Account Status</th>
+                      <th>Date Registered</th>
+                      <th>Actions & Reports</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {patients.map(p => (
+                      <tr key={p.id || p.healthId}>
+                        <td><strong>{p.healthId || 'EMH-100001'}</strong></td>
+                        <td><strong>{p.name}</strong></td>
+                        <td>{p.email}</td>
+                        <td><span className="badge badge-patient">{p.bloodGroup || 'A+'}</span></td>
+                        <td><span className={p.status === 'Active' ? 'badge badge-green' : 'badge badge-red'}>{p.status}</span></td>
+                        <td>{p.created || '2026-08-01'}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <button onClick={() => handleExportPatientsPDF(p)} className="btn-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
+                              📄 PDF
+                            </button>
+                            <button onClick={handleExportPatientsCSV} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
+                              📊 Excel
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* QUICK SUMMARY CARDS */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                <div className="dash-card" style={{ background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '0.5rem', color: '#0f172a' }}>📄 Bulk PDF Medical Export</h4>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.5rem 0 1rem' }}>
+                    Generate print-ready, official platform PDF summaries for all registered patients, including emergency contacts and critical health attributes.
+                  </p>
+                  <button onClick={() => handleExportPatientsPDF()} className="btn-primary" style={{ fontSize: '0.8rem' }}>Generate Bulk PDF Report</button>
+                </div>
+
+                <div className="dash-card" style={{ background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '0.5rem', color: '#0f172a' }}>📊 Excel / CSV Spreadsheet Export</h4>
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.5rem 0 1rem' }}>
+                    Export structured patient data into Microsoft Excel, Google Sheets, or CSV tabular files for offline analytics and clinical audits.
+                  </p>
+                  <button onClick={handleExportPatientsCSV} className="btn-secondary" style={{ fontSize: '0.8rem', background: '#16a34a', color: '#fff', border: 'none' }}>Download Excel / CSV File</button>
                 </div>
               </div>
             </div>
           )}
+
 
           {/* TAB 7: SYSTEM ANALYTICS */}
           {activeTab === 'system_analytics' && (

@@ -61,10 +61,68 @@ function MedicDashboard() {
     { id: 2, medication_name: 'Metformin', dosage: '500mg', frequency: 'Twice Daily', duration: 'Continuous', status: 'Active' }
   ]);
 
-  const [recentScans] = useState([
-    { id: 1, health_id: 'EMH-100001', patient_name: 'John Doe', blood_group: 'O-', scan_type: 'Emergency Triage', scan_status: 'Critical Alert', time: '10 mins ago' },
-    { id: 2, health_id: 'EMH-100002', patient_name: 'Jane Smith', blood_group: 'A+', scan_type: 'Routine Outpatient', scan_status: 'Normal', time: '1 hour ago' }
-  ]);
+  const [recentScans, setRecentScans] = useState([]);
+  const [medicProfile, setMedicProfile] = useState(null);
+  const [patientList, setPatientList] = useState([]);
+
+  useEffect(() => {
+    fetchMedicDashboardData();
+  }, [user]);
+
+  const fetchMedicDashboardData = async () => {
+    try {
+      const authId = user?.auth_id || user?.authId || 'auth_medic_001';
+
+      // 1. Fetch Medic Profile
+      const mRes = await fetch(`http://localhost:5000/api/medics/auth/${authId}`);
+      const mData = await mRes.json();
+      if (mData.success && mData.data) {
+        setMedicProfile(mData.data);
+      }
+
+      // 2. Fetch Patients List & Active Patient Data
+      const pRes = await fetch('http://localhost:5000/api/patients');
+      const pData = await pRes.json();
+      if (pData.success && Array.isArray(pData.data) && pData.data.length > 0) {
+        setPatientList(pData.data);
+        const p = pData.data[0];
+        setActivePatient(prev => ({
+          ...prev,
+          id: p.id,
+          health_id: p.health_id || 'EMH-100001',
+          full_name: p.full_name || 'John Doe',
+          dob: p.date_of_birth ? p.date_of_birth.slice(0, 10) : '1990-05-14',
+          blood_group: p.blood_group || 'O-',
+          allergies: p.allergies ? (Array.isArray(p.allergies) ? p.allergies : JSON.parse(p.allergies)) : prev.allergies,
+          chronic_conditions: p.medical_conditions ? (Array.isArray(p.medical_conditions) ? p.medical_conditions : JSON.parse(p.medical_conditions)) : prev.chronic_conditions
+        }));
+
+        setRecentScans([
+          { id: 1, health_id: p.health_id || 'EMH-100001', patient_name: p.full_name || 'John Doe', blood_group: p.blood_group || 'O-', scan_type: 'Emergency Triage', scan_status: 'Critical Alert', time: 'Just now' }
+        ]);
+      }
+
+      // 3. Fetch Encounters
+      const rRes = await fetch(`http://localhost:5000/api/records/patient/${activePatient.id || 1}`);
+      const rData = await rRes.json();
+      if (rData.success && Array.isArray(rData.data) && rData.data.length > 0) {
+        setEncounters(rData.data.map(r => ({
+          id: r.id,
+          date: r.record_date ? r.record_date.slice(0, 10) : '2026-08-04',
+          symptoms: r.symptoms || 'Presented for clinical evaluation',
+          diagnosis: r.diagnosis || 'Clinical Diagnosis',
+          notes: r.clinical_notes || 'Patient evaluated by ER medic.',
+          treatment: r.treatment || 'Standard clinical management',
+          procedures: r.procedures || 'Vitals Check, ECG',
+          follow_up: r.follow_up || 'As needed'
+        })));
+      }
+    } catch (err) {
+      console.warn('Real medic data load notice:', err);
+    }
+  };
+
+
 
   // Form states
   const [encounterForm, setEncounterForm] = useState({ symptoms: '', diagnosis: '', notes: '', treatment: '', procedures: '', follow_up: '' });
@@ -166,12 +224,10 @@ function MedicDashboard() {
           <button className={`sidebar-nav-btn ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
             📊 Clinical Analytics
           </button>
-          <button className={`sidebar-nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
-            🩺 Professional Profile
-          </button>
           <button className={`sidebar-nav-btn ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>
             🔔 Notifications
           </button>
+
           <button className={`sidebar-nav-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
             ⚙️ Settings
           </button>
@@ -382,14 +438,7 @@ function MedicDashboard() {
                     <td>Diabetes Type 2</td>
                     <td><button onClick={() => setActiveTab('triage')} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Open Triage</button></td>
                   </tr>
-                  <tr>
-                    <td><strong>EMH-100002</strong></td>
-                    <td>Jane Smith</td>
-                    <td>ID-112233445</td>
-                    <td><span className="badge badge-patient">A+</span></td>
-                    <td>Hypertension</td>
-                    <td><button onClick={() => setActiveTab('triage')} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Open Triage</button></td>
-                  </tr>
+
                 </tbody>
               </table>
             </div>
@@ -560,8 +609,13 @@ function MedicDashboard() {
 
           {/* TAB 11: PROFESSIONAL PROFILE & CREDENTIALS */}
           {activeTab === 'profile' && (
-            <UserProfileManager />
+            <UserProfileManager 
+              onSaveSuccess={() => {
+                setActiveTab('home');
+              }} 
+            />
           )}
+
 
 
           {/* TAB 12: NOTIFICATIONS */}

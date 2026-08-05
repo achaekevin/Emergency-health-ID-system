@@ -134,7 +134,7 @@ function Login() {
           <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', textAlign: 'center' }}>
             ⚡ Quick Test Logins
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.6rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem' }}>
             <button
               type="button"
               onClick={() => handleQuickLogin('admin@edhis.com', 'Password123')}
@@ -191,29 +191,11 @@ function Login() {
             >
               👤 Patient (John Doe)
             </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('jane@test.com', 'Password123')}
-              disabled={loading}
-              style={{
-                padding: '0.55rem',
-                borderRadius: '8px',
-                border: '1px solid #38bdf8',
-                background: '#f0f9ff',
-                color: '#0369a1',
-                fontWeight: '700',
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-                textAlign: 'center'
-              }}
-            >
-              👩 Patient (Jane Smith)
-            </button>
           </div>
         </div>
 
         <div className="auth-footer">
+
           <p>
             Don't have an account?{' '}
             <Link to="/register" className="auth-link">
