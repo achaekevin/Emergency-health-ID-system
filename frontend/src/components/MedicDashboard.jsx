@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
 import { useSelector } from 'react-redux';
 import QRScannerModal from './QRScannerModal';
 import UserProfileManager from './UserProfileManager';
