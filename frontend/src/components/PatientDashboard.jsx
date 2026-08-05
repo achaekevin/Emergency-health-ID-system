@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import HealthIDCard from './HealthIDCard';
 import UserProfileManager from './UserProfileManager';
+import MedicalTimeline from './MedicalTimeline';
+import DocumentRepository from './DocumentRepository';
+import AppointmentModule from './AppointmentModule';
+
 
 
 function PatientDashboard() {
@@ -168,9 +172,19 @@ function PatientDashboard() {
           <button className={`sidebar-nav-btn ${activeTab === 'medical_history' ? 'active' : ''}`} onClick={() => setActiveTab('medical_history')}>
             📋 Medical History (Read Only)
           </button>
-          <button className={`sidebar-nav-btn ${activeTab === 'documents' ? 'active' : ''}`} onClick={() => setActiveTab('documents')}>
-            📁 Documents
+          <button className={`sidebar-nav-btn ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>
+            📈 Care Pathway Timeline
           </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'appointments' ? 'active' : ''}`} onClick={() => setActiveTab('appointments')}>
+            📅 Appointments & Follow-ups
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'consent' ? 'active' : ''}`} onClick={() => setActiveTab('consent')}>
+            🔐 Consent Management
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'documents' ? 'active' : ''}`} onClick={() => setActiveTab('documents')}>
+            📁 Documents & Scans
+          </button>
+
           <button className={`sidebar-nav-btn ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>
             🔔 Notifications
           </button>
@@ -425,39 +439,50 @@ function PatientDashboard() {
             </div>
           )}
 
-          {/* TAB 6: DOCUMENTS */}
-          {activeTab === 'documents' && (
+          {/* TAB: MEDICAL TIMELINE */}
+          {activeTab === 'timeline' && (
+            <MedicalTimeline />
+          )}
+
+          {/* TAB: APPOINTMENTS */}
+          {activeTab === 'appointments' && (
+            <AppointmentModule />
+          )}
+
+          {/* TAB: CONSENT MANAGEMENT */}
+          {activeTab === 'consent' && (
             <div className="dash-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 className="card-title" style={{ margin: 0 }}>📁 Uploaded Medical Documents</h3>
-                <button onClick={() => setShowDocUploadModal(true)} className="btn-primary" style={{ fontSize: '0.8rem' }}>📤 Upload Document</button>
+              <h3 className="card-title">🔐 Patient Consent & Access Permissions Management</h3>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
+                Grant, restrict, or temporarily authorize medical access to your digital health record.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: '700', marginBottom: '0.5rem' }}>Default Access Scope</h4>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button className="btn-primary" style={{ fontSize: '0.8rem' }}>✔ All Licensed Medical Professionals</button>
+                    <button className="btn-secondary" style={{ fontSize: '0.8rem' }}>Emergency Triage Only</button>
+                    <button className="btn-secondary" style={{ fontSize: '0.8rem' }}>Whitelisted Hospitals Only</button>
+                  </div>
+                </div>
+
+                <div style={{ background: '#f0fdf4', padding: '1.25rem', borderRadius: '12px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <strong style={{ color: '#166534' }}>⏱️ Temporary 24-Hour Access Token</strong>
+                    <p style={{ fontSize: '0.8rem', color: '#15803d', margin: 0 }}>Active until tomorrow 09:30 AM EST</p>
+                  </div>
+                  <button onClick={() => alert('Temporary token revoked immediately!')} className="btn-danger">Revoke Access Now</button>
+                </div>
               </div>
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Document Name</th>
-                    <th>Category</th>
-                    <th>Uploaded Date</th>
-                    <th>Size</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents.map(d => (
-                    <tr key={d.id}>
-                      <td><strong>{d.title}</strong></td>
-                      <td><span className="badge badge-patient">{d.category}</span></td>
-                      <td>{d.uploaded_at}</td>
-                      <td>{d.size}</td>
-                      <td>
-                        <button onClick={() => alert(`Downloading ${d.title}...`)} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Download</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           )}
+
+          {/* TAB 6: DOCUMENTS & SCANS */}
+          {activeTab === 'documents' && (
+            <DocumentRepository />
+          )}
+
 
           {/* TAB 7: NOTIFICATIONS */}
           {activeTab === 'notifications' && (

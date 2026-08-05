@@ -13,6 +13,9 @@ import medicationLogRoutes from './routes/medicationLogRoutes.js';
 import academicDocRoutes from './routes/academicDocRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import hospitalRoutes from './routes/hospitalRoutes.js';
+import consentRoutes from './routes/consentRoutes.js';
+import appointmentRoutes from './routes/appointmentRoutes.js';
 
 dotenv.config();
 
@@ -63,6 +66,10 @@ app.use('/api/medics', medicRoutes);
 app.use('/api/records', medicalRecordRoutes);
 app.use('/api/medication-log', medicationLogRoutes);
 app.use('/api/academic-docs', academicDocRoutes);
+app.use('/api/hospitals', hospitalRoutes);
+app.use('/api/consent', consentRoutes);
+app.use('/api/appointments', appointmentRoutes);
+
 
 // Health check
 app.get('/', (req, res) => {

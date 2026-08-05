@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import QRScannerModal from './QRScannerModal';
 import UserProfileManager from './UserProfileManager';
+import MedicalTimeline from './MedicalTimeline';
+import DocumentRepository from './DocumentRepository';
+import AppointmentModule from './AppointmentModule';
+import { checkDrugInteractions } from '../utils/drugInteractionChecker';
+
 
 
 function MedicDashboard() {
@@ -83,10 +88,19 @@ function MedicDashboard() {
 
   const handleAddPrescription = (e) => {
     e.preventDefault();
+    const warnings = checkDrugInteractions(prescriptionForm.medication_name, prescriptions, activePatient.allergies || []);
+    
+    if (warnings.length > 0) {
+      const warningMsg = warnings.map(w => `${w.title}\n${w.details}`).join('\n\n');
+      const proceed = window.confirm(`⚠️ CLINICAL DECISION SUPPORT WARNING:\n\n${warningMsg}\n\nDo you want to override this warning and proceed?`);
+      if (!proceed) return;
+    }
+
     setPrescriptions([{ id: Date.now(), ...prescriptionForm, status: 'Active' }, ...prescriptions]);
     setPrescriptionForm({ medication_name: '', dosage: '', frequency: '', duration: '' });
     alert('Prescription issued successfully!');
   };
+
 
   const handleStopPrescription = (id) => {
     setPrescriptions(prescriptions.map(p => p.id === id ? { ...p, status: 'Stopped' } : p));
@@ -519,27 +533,9 @@ function MedicDashboard() {
 
           {/* TAB 9: TIMELINE */}
           {activeTab === 'timeline' && (
-            <div className="dash-card">
-              <h3 className="card-title">📈 Chronological Patient Timeline</h3>
-              <div style={{ borderLeft: '3px solid #0284c7', paddingLeft: '1.25rem', marginLeft: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7' }}>TODAY — AUG 05, 2026</span>
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: '700', marginTop: '0.1rem' }}>ER Triage QR Scan</h4>
-                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Scanned at City General ER by Dr. Sarah Johnson</p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7' }}>JUL 20, 2026</span>
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: '700', marginTop: '0.1rem' }}>Acute Hypertensive Episode</h4>
-                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Prescribed Lisinopril 10mg</p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7' }}>JUN 15, 2026</span>
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: '700', marginTop: '0.1rem' }}>Endocrinology Consultation</h4>
-                  <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Confirmed Type 2 Diabetes control with Metformin</p>
-                </div>
-              </div>
-            </div>
+            <MedicalTimeline />
           )}
+
 
           {/* TAB 10: ANALYTICS */}
           {activeTab === 'analytics' && (
