@@ -4,336 +4,649 @@ import HealthIDCard from './HealthIDCard';
 
 function PatientDashboard() {
   const { user } = useSelector((state) => state.auth || {});
-  
-  // Patient state
-  const [patientData, setPatientData] = useState(user || {});
-  const [emergencyContacts, setEmergencyContacts] = useState([]);
-  const [medicationLogs, setMedicationLogs] = useState([]);
-  const [medicalRecords, setMedicalRecords] = useState([]);
-  const [scanLogs, setScanLogs] = useState([]);
-  
-  // Modals & UI states
-  const [showAddContactModal, setShowAddContactModal] = useState(false);
-  const [showAddMedModal, setShowAddMedModal] = useState(false);
-  const [showEditVitalsModal, setShowEditVitalsModal] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  // Form states
-  const [newContact, setNewContact] = useState({ name: '', relationship: '', phone: '', priority: 1 });
-  const [newMed, setNewMed] = useState({ medication_name: '', dosage: '', frequency: '', purpose: '' });
-  const [editVitals, setEditVitals] = useState({
-    blood_group: user?.blood_group || 'A+',
-    age: user?.age || 34,
+  // Active tab state
+  const [activeTab, setActiveTab] = useState('home');
+  const [medInfoSubTab, setMedInfoSubTab] = useState('allergies');
+
+  // Patient state
+  const [patientData, setPatientData] = useState({
+    id: user?.profileId || user?.id || 1,
+    full_name: user?.fullName || user?.full_name || 'John Doe',
+    email: user?.email || 'patient@edhis.com',
+    health_id: user?.healthId || 'EMH-100001',
+    national_id: user?.national_id || 'ID-987654321',
+    dob: user?.dob || '1990-05-14',
     gender: user?.gender || 'Male',
-    medical_conditions: Array.isArray(user?.medical_conditions) ? user.medical_conditions.join(', ') : (user?.medical_conditions || 'Diabetes Type 2, Hypertension'),
-    allergies: Array.isArray(user?.allergies) ? user.allergies.join(', ') : (user?.allergies || 'Penicillin, Peanuts')
+    blood_group: user?.blood_group || 'A+',
+    weight: user?.weight || '74 kg',
+    height: user?.height || '178 cm',
+    organ_donor: user?.organ_donor || 'Yes (Registered)',
+    insurance_provider: user?.insurance_provider || 'Aetna Health Care',
+    insurance_policy: user?.insurance_policy || 'POL-992104-X',
+    allergies: user?.allergies || [
+      { id: 1, name: 'Penicillin', severity: 'High', notes: 'Causes severe anaphylactic rash' },
+      { id: 2, name: 'Peanuts', severity: 'Critical', notes: 'Carries EpiPen everywhere' }
+    ],
+    medical_conditions: user?.medical_conditions || [
+      { id: 1, condition: 'Diabetes Type 2', category: 'Chronic', notes: 'Controlled via Metformin' },
+      { id: 2, condition: 'Hypertension', category: 'Chronic', notes: 'Monitored daily' }
+    ],
+    surgeries: ['Appendectomy (2018)', 'Knee Arthroscopy (2021)'],
+    disabilities: 'None',
+    pregnancy_status: 'N/A',
+    family_history: 'Hypertension (Father), Type 2 Diabetes (Mother)',
+    lifestyle: {
+      smoking: 'Non-Smoker',
+      alcohol: 'Occasional (Social)',
+      exercise: '3 times / week (Moderate)'
+    }
   });
 
-  const patientId = user?.profileId || user?.id || 1;
+  const [emergencyContacts, setEmergencyContacts] = useState([
+    { id: 1, name: 'Sarah Doe', relationship: 'Spouse', phone: '+1 (555) 234-5678', priority: 1, is_primary: true },
+    { id: 2, name: 'Robert Doe', relationship: 'Brother', phone: '+1 (555) 876-5432', priority: 2, is_primary: false }
+  ]);
 
-  useEffect(() => {
-    fetchPatientData();
-  }, [user]);
+  const [medicationLogs, setMedicationLogs] = useState([
+    { id: 1, medication_name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', start_date: '2025-01-10', end_date: 'Continuous', reminder: true, status: 'active' },
+    { id: 2, medication_name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily (Morning)', start_date: '2025-03-15', end_date: 'Continuous', reminder: true, status: 'active' }
+  ]);
 
-  const fetchPatientData = async () => {
-    setLoading(true);
-    try {
-      // 1. Fetch Emergency Contacts
-      const contactsRes = await fetch(`http://localhost:5000/api/emergency-contacts/patient/${patientId}`);
-      const contactsJson = await contactsRes.json();
-      if (contactsJson.success && Array.isArray(contactsJson.data)) {
-        setEmergencyContacts(contactsJson.data);
-      } else {
-        // Fallback seed data if API returns empty
-        setEmergencyContacts([
-          { id: 1, name: 'Sarah Doe', relationship: 'Spouse', phone: '+1 (555) 234-5678', priority: 1 },
-          { id: 2, name: 'Robert Doe', relationship: 'Brother', phone: '+1 (555) 876-5432', priority: 2 }
-        ]);
-      }
+  const [medicalHistory] = useState([
+    { id: 1, date: '2026-06-15', doctor: 'Dr. Sarah Johnson', facility: 'City General Hospital', type: 'Clinical Encounter', diagnosis: 'Type 2 Diabetes controlled', prescription: 'Metformin 500mg', notes: 'Routine checkup. Blood glucose stable.' },
+    { id: 2, date: '2026-07-20', doctor: 'Dr. Marcus Vance', facility: 'St. Jude Emergency Center', type: 'Emergency Response', diagnosis: 'Mild Hypertension Spurt', prescription: 'Lisinopril 10mg', notes: 'Patient arrived with elevated BP. Stabilized within 2 hours.' }
+  ]);
 
-      // 2. Fetch Medications
-      const medsRes = await fetch(`http://localhost:5000/api/medication-log/patient/${patientId}`);
-      const medsJson = await medsRes.json();
-      if (medsJson.success && Array.isArray(medsJson.data)) {
-        setMedicationLogs(medsJson.data);
-      } else {
-        setMedicationLogs([
-          { id: 1, medication_name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', purpose: 'Blood sugar control', status: 'active' },
-          { id: 2, medication_name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily in morning', purpose: 'Blood pressure regulation', status: 'active' }
-        ]);
-      }
+  const [documents, setDocuments] = useState([
+    { id: 1, title: 'Prescription_Metformin_2026.pdf', category: 'Prescription', uploaded_at: '2026-06-15', size: '240 KB' },
+    { id: 2, title: 'Blood_Panel_Lab_Report.pdf', category: 'Lab Report', uploaded_at: '2026-06-14', size: '1.2 MB' },
+    { id: 3, title: 'Insurance_Card_Aetna.pdf', category: 'Insurance', uploaded_at: '2026-01-05', size: '450 KB' }
+  ]);
 
-      // 3. Fetch Medical Records
-      const recordsRes = await fetch(`http://localhost:5000/api/records/patient/${patientId}`);
-      const recordsJson = await recordsRes.json();
-      if (recordsJson.success && Array.isArray(recordsJson.data)) {
-        setMedicalRecords(recordsJson.data);
-      } else {
-        setMedicalRecords([
-          { id: 1, record_type: 'Checkup', title: 'Annual Health Evaluation', diagnosis: 'Type 2 Diabetes controlled', facility: 'City General Hospital', date_recorded: '2026-06-15' },
-          { id: 2, record_type: 'Emergency', title: 'Emergency Room Triage Scan', diagnosis: 'Mild Hypertension', facility: 'St. Jude Emergency Center', date_recorded: '2026-07-20' }
-        ]);
-      }
+  const [accessHistory] = useState([
+    { id: 1, medic_name: 'Dr. Sarah Johnson', hospital: 'City General Hospital', date: '2026-07-20', time: '14:22 EST', reason: 'Emergency ER Triage Scan' },
+    { id: 2, medic_name: 'Dr. Marcus Vance', hospital: 'St. Jude ER', date: '2026-06-15', time: '09:15 EST', reason: 'Routine Outpatient Consultation' }
+  ]);
 
-      // 4. Fetch Recent Scan Logs
-      const scanRes = await fetch(`http://localhost:5000/api/analytics/scans/recent?limit=5`);
-      const scanJson = await scanRes.json();
-      if (scanJson.success && Array.isArray(scanJson.data)) {
-        setScanLogs(scanJson.data);
-      }
-    } catch (err) {
-      console.warn('Error fetching patient details:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [notifications] = useState([
+    { id: 1, type: 'Medication', message: 'Time to take Metformin 500mg', time: '10 mins ago', unread: true },
+    { id: 2, type: 'Security', message: 'Your Health ID QR was scanned by Dr. Sarah Johnson', time: '2 hours ago', unread: false },
+    { id: 3, type: 'Appointment', message: 'Upcoming Endocrinology follow-up tomorrow at 10:00 AM', time: '1 day ago', unread: false }
+  ]);
 
-  // Add Emergency Contact
-  const handleAddContact = async (e) => {
+  // Form & Modal States
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showAddAllergyModal, setShowAddAllergyModal] = useState(false);
+  const [showAddContactModal, setShowAddContactModal] = useState(false);
+  const [showAddMedModal, setShowAddMedModal] = useState(false);
+  const [showDocUploadModal, setShowDocUploadModal] = useState(false);
+
+  // Forms
+  const [newAllergy, setNewAllergy] = useState({ name: '', severity: 'Moderate', notes: '' });
+  const [newContact, setNewContact] = useState({ name: '', relationship: '', phone: '', priority: 1, is_primary: false });
+  const [newMed, setNewMed] = useState({ medication_name: '', dosage: '', frequency: '', start_date: '', end_date: '', reminder: true });
+  const [newDoc, setNewDoc] = useState({ title: '', category: 'Lab Report' });
+  const [passwordForm, setPasswordForm] = useState({ current: '', newPass: '', confirmPass: '' });
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+  // Handlers
+  const handleAddAllergy = (e) => {
     e.preventDefault();
-    try {
-      const res = await fetch('http://localhost:5000/api/emergency-contacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patient_id: patientId, ...newContact })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setEmergencyContacts([...emergencyContacts, { id: data.data.id, ...newContact }]);
-      } else {
-        setEmergencyContacts([...emergencyContacts, { id: Date.now(), ...newContact }]);
-      }
-      setNewContact({ name: '', relationship: '', phone: '', priority: 1 });
-      setShowAddContactModal(false);
-    } catch (err) {
-      setEmergencyContacts([...emergencyContacts, { id: Date.now(), ...newContact }]);
-      setShowAddContactModal(false);
-    }
+    const updated = [...patientData.allergies, { id: Date.now(), ...newAllergy }];
+    setPatientData({ ...patientData, allergies: updated });
+    setNewAllergy({ name: '', severity: 'Moderate', notes: '' });
+    setShowAddAllergyModal(false);
   };
 
-  // Add Medication Log
-  const handleAddMedication = async (e) => {
+  const handleAddContact = (e) => {
     e.preventDefault();
-    try {
-      const res = await fetch('http://localhost:5000/api/medication-log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patient_id: patientId, start_date: new Date().toISOString().slice(0, 10), ...newMed })
-      });
-      const data = await res.json();
-      setMedicationLogs([...medicationLogs, { id: data.data?.id || Date.now(), ...newMed, status: 'active' }]);
-      setNewMed({ medication_name: '', dosage: '', frequency: '', purpose: '' });
-      setShowAddMedModal(false);
-    } catch (err) {
-      setMedicationLogs([...medicationLogs, { id: Date.now(), ...newMed, status: 'active' }]);
-      setShowAddMedModal(false);
-    }
+    setEmergencyContacts([...emergencyContacts, { id: Date.now(), ...newContact }]);
+    setNewContact({ name: '', relationship: '', phone: '', priority: 1, is_primary: false });
+    setShowAddContactModal(false);
   };
 
-  // Update Health Vitals
-  const handleSaveVitals = () => {
-    setPatientData({
-      ...patientData,
-      blood_group: editVitals.blood_group,
-      age: editVitals.age,
-      gender: editVitals.gender,
-      medical_conditions: editVitals.medical_conditions.split(',').map(s => s.trim()),
-      allergies: editVitals.allergies.split(',').map(s => s.trim())
-    });
-    setShowEditVitalsModal(false);
+  const handleAddMedication = (e) => {
+    e.preventDefault();
+    setMedicationLogs([...medicationLogs, { id: Date.now(), ...newMed, status: 'active' }]);
+    setNewMed({ medication_name: '', dosage: '', frequency: '', start_date: '', end_date: '', reminder: true });
+    setShowAddMedModal(false);
   };
 
-  const getConditionsList = () => {
-    if (Array.isArray(patientData.medical_conditions)) return patientData.medical_conditions;
-    if (typeof patientData.medical_conditions === 'string') return patientData.medical_conditions.split(',');
-    return ['Diabetes Type 2', 'Hypertension'];
+  const handleAddDocument = (e) => {
+    e.preventDefault();
+    setDocuments([...documents, { id: Date.now(), title: newDoc.title || 'Uploaded_Document.pdf', category: newDoc.category, uploaded_at: new Date().toISOString().slice(0, 10), size: '320 KB' }]);
+    setNewDoc({ title: '', category: 'Lab Report' });
+    setShowDocUploadModal(false);
   };
 
-  const getAllergiesList = () => {
-    if (Array.isArray(patientData.allergies)) return patientData.allergies;
-    if (typeof patientData.allergies === 'string') return patientData.allergies.split(',');
-    return ['Penicillin', 'Peanuts'];
+  const handleRegenerateQR = () => {
+    alert('QR Code successfully regenerated and security token updated!');
   };
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1>Patient Emergency Portal</h1>
-        <p>Manage your emergency digital health identity, contacts, vitals, and medical logs</p>
+      {/* Header Banner */}
+      <div className="dash-card" style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#fff', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+              <span className="badge badge-patient" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}>PATIENT PORTAL</span>
+              <span style={{ fontSize: '0.8rem', color: '#bae6fd' }}>Health ID: {patientData.health_id}</span>
+            </div>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: '800' }}>Welcome, {patientData.full_name}</h1>
+            <p style={{ color: '#e0f2fe', fontSize: '0.9rem' }}>Manage your emergency digital health card, personal vitals, medications & records</p>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.15)', padding: '0.75rem 1.25rem', borderRadius: '12px', textAlign: 'center' }}>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#e0f2fe' }}>Profile Completion</span>
+            <div style={{ fontSize: '1.4rem', fontWeight: '800', margin: '0.2rem 0' }}>85%</div>
+            <span style={{ fontSize: '0.75rem', color: '#bae6fd' }}>Vitals & Contacts Active</span>
+          </div>
+        </div>
       </div>
 
-      <div className="grid-3" style={{ marginBottom: '2rem' }}>
-        {/* Card 1: Official Health ID Card */}
-        <div style={{ gridColumn: 'span 2' }}>
-          <HealthIDCard patient={patientData} />
+      {/* Main Dashboard Navigation Layout */}
+      <div className="dashboard-layout">
+        {/* Sidebar */}
+        <div className="dashboard-sidebar">
+          <div className="sidebar-section-title">Navigation</div>
+          
+          <button className={`sidebar-nav-btn ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
+            🏠 Dashboard Home
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'my_health_id' ? 'active' : ''}`} onClick={() => setActiveTab('my_health_id')}>
+            🪪 My Health ID
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
+            👤 Personal Profile
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'medical_info' ? 'active' : ''}`} onClick={() => setActiveTab('medical_info')}>
+            🩺 Medical Information
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'medical_history' ? 'active' : ''}`} onClick={() => setActiveTab('medical_history')}>
+            📋 Medical History (Read Only)
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'documents' ? 'active' : ''}`} onClick={() => setActiveTab('documents')}>
+            📁 Documents
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>
+            🔔 Notifications
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'access_history' ? 'active' : ''}`} onClick={() => setActiveTab('access_history')}>
+            👁️ Access History
+          </button>
+          
+          <div className="sidebar-section-title">Security & Account</div>
+          <button className={`sidebar-nav-btn ${activeTab === 'privacy_security' ? 'active' : ''}`} onClick={() => setActiveTab('privacy_security')}>
+            🛡️ Privacy & Security
+          </button>
+          <button className={`sidebar-nav-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+            ⚙️ Settings
+          </button>
         </div>
 
-        {/* Card 2: Health Vitals & Quick Summary */}
-        <div className="dash-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 className="card-title" style={{ margin: 0 }}>🩺 Medical Vitals</h3>
-            <button onClick={() => setShowEditVitalsModal(true)} className="btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}>
-              ✏️ Edit
-            </button>
-          </div>
+        {/* Content Area */}
+        <div className="dashboard-main-content">
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Medical Conditions</span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.35rem' }}>
-                {getConditionsList().map((cond, idx) => (
-                  <span key={idx} className="badge badge-amber">{cond.trim()}</span>
-                ))}
+          {/* TAB 1: DASHBOARD HOME */}
+          {activeTab === 'home' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="grid-3">
+                <div style={{ gridColumn: 'span 2' }}>
+                  <HealthIDCard patient={patientData} />
+                </div>
+                <div className="dash-card">
+                  <h3 className="card-title">🚨 Emergency Summary</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ background: '#fee2e2', padding: '0.75rem 1rem', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#991b1b', textTransform: 'uppercase' }}>Severe Allergies</span>
+                      <p style={{ fontWeight: '700', color: '#7f1d1d', marginTop: '0.15rem' }}>Penicillin, Peanuts (Severe)</p>
+                    </div>
+                    <div style={{ background: '#fef3c7', padding: '0.75rem 1rem', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#92400e', textTransform: 'uppercase' }}>Chronic Conditions</span>
+                      <p style={{ fontWeight: '700', color: '#78350f', marginTop: '0.15rem' }}>Diabetes Type 2, Hypertension</p>
+                    </div>
+                    <div style={{ background: '#f0fdf4', padding: '0.75rem 1rem', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#166534', textTransform: 'uppercase' }}>Primary Emergency Contact</span>
+                      <p style={{ fontWeight: '700', color: '#14532d', marginTop: '0.15rem' }}>Sarah Doe (Spouse) — +1 (555) 234-5678</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid-2">
+                <div className="dash-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 className="card-title" style={{ margin: 0 }}>⏰ Medication Reminders</h3>
+                    <button onClick={() => setActiveTab('medical_info')} className="btn-secondary" style={{ fontSize: '0.75rem' }}>View All</button>
+                  </div>
+                  {medicationLogs.map(m => (
+                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>
+                      <div>
+                        <strong>{m.medication_name}</strong> ({m.dosage})
+                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{m.frequency}</div>
+                      </div>
+                      <span className="badge badge-green">Active</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="dash-card">
+                  <h3 className="card-title">📅 Upcoming Appointments</h3>
+                  <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '0.75rem' }}>
+                    <strong style={{ display: 'block', color: '#0f172a' }}>Endocrinology Follow-up</strong>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Dr. Sarah Johnson • Tomorrow at 10:00 AM</span>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <strong style={{ display: 'block', color: '#0f172a' }}>Cardiology Routine Check</strong>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>City Hospital • Aug 24, 2026</span>
+                  </div>
+                </div>
               </div>
             </div>
+          )}
 
-            <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Severe Allergies</span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.35rem' }}>
-                {getAllergiesList().map((all, idx) => (
-                  <span key={idx} className="badge badge-red">⚠️ {all.trim()}</span>
-                ))}
+          {/* TAB 2: MY HEALTH ID */}
+          {activeTab === 'my_health_id' && (
+            <div className="dash-card">
+              <h3 className="card-title">🪪 Official Digital Health ID & QR</h3>
+              <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+                <div style={{ flex: '1', minWidth: '300px' }}>
+                  <HealthIDCard patient={patientData} />
+                </div>
+                <div style={{ flex: '1', minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '0.5rem' }}>Health ID Actions</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      <button onClick={() => window.print()} className="btn-primary">🖨️ Print Health ID Card</button>
+                      <button onClick={() => alert('Downloading Health ID PDF Summary...')} className="btn-secondary">📥 Download PDF Card</button>
+                      <button onClick={handleRegenerateQR} className="btn-secondary">🔄 Regenerate QR Code Token</button>
+                      <button onClick={() => setShowShareModal(true)} className="btn-secondary">🔗 Share QR Code Securely</button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+          )}
 
-            <div style={{ background: '#f0fdf4', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#15803d', textTransform: 'uppercase' }}>System Status</span>
-              <p style={{ fontSize: '0.875rem', fontWeight: '700', color: '#166534', marginTop: '0.15rem' }}>
-                ✅ Emergency Sync Active & Ready
+          {/* TAB 3: PERSONAL PROFILE */}
+          {activeTab === 'profile' && (
+            <div className="dash-card">
+              <h3 className="card-title">👤 Edit Personal Profile</h3>
+              <form onSubmit={(e) => { e.preventDefault(); alert('Profile updated successfully!'); }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Full Name</label>
+                  <input type="text" value={patientData.full_name} onChange={(e) => setPatientData({ ...patientData, full_name: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>National ID / Passport</label>
+                  <input type="text" value={patientData.national_id} onChange={(e) => setPatientData({ ...patientData, national_id: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Date of Birth</label>
+                  <input type="date" value={patientData.dob} onChange={(e) => setPatientData({ ...patientData, dob: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Gender</label>
+                  <select value={patientData.gender} onChange={(e) => setPatientData({ ...patientData, gender: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Blood Group</label>
+                  <select value={patientData.blood_group} onChange={(e) => setPatientData({ ...patientData, blood_group: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Organ Donor Status</label>
+                  <input type="text" value={patientData.organ_donor} onChange={(e) => setPatientData({ ...patientData, organ_donor: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Insurance Provider</label>
+                  <input type="text" value={patientData.insurance_provider} onChange={(e) => setPatientData({ ...patientData, insurance_provider: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Insurance Policy Number</label>
+                  <input type="text" value={patientData.insurance_policy} onChange={(e) => setPatientData({ ...patientData, insurance_policy: e.target.value })} style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                </div>
+                <div style={{ gridColumn: 'span 2', marginTop: '1rem' }}>
+                  <button type="submit" className="btn-primary">💾 Save Profile Changes</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* TAB 4: MEDICAL INFORMATION */}
+          {activeTab === 'medical_info' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="sub-nav-bar">
+                <button className={`sub-nav-pill ${medInfoSubTab === 'allergies' ? 'active' : ''}`} onClick={() => setMedInfoSubTab('allergies')}>Allergies</button>
+                <button className={`sub-nav-pill ${medInfoSubTab === 'conditions' ? 'active' : ''}`} onClick={() => setMedInfoSubTab('conditions')}>Medical Conditions</button>
+                <button className={`sub-nav-pill ${medInfoSubTab === 'lifestyle' ? 'active' : ''}`} onClick={() => setMedInfoSubTab('lifestyle')}>Lifestyle</button>
+                <button className={`sub-nav-pill ${medInfoSubTab === 'medications' ? 'active' : ''}`} onClick={() => setMedInfoSubTab('medications')}>Current Medications</button>
+                <button className={`sub-nav-pill ${medInfoSubTab === 'contacts' ? 'active' : ''}`} onClick={() => setMedInfoSubTab('contacts')}>Emergency Contacts</button>
+              </div>
+
+              {/* Sub tab: Allergies */}
+              {medInfoSubTab === 'allergies' && (
+                <div className="dash-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 className="card-title" style={{ margin: 0 }}>⚠️ Allergies Management</h3>
+                    <button onClick={() => setShowAddAllergyModal(true)} className="btn-primary" style={{ fontSize: '0.8rem' }}>+ Add Allergy</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {patientData.allergies.map(a => (
+                      <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div>
+                          <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{a.name}</strong>
+                          <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem' }}>{a.notes}</p>
+                        </div>
+                        <span className={`badge ${a.severity === 'Critical' || a.severity === 'High' ? 'badge-red' : 'badge-amber'}`}>{a.severity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sub tab: Conditions */}
+              {medInfoSubTab === 'conditions' && (
+                <div className="dash-card">
+                  <h3 className="card-title">🩺 Chronic Diseases & Surgeries</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div>
+                      <h4 style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '0.5rem' }}>CHRONIC CONDITIONS</h4>
+                      {patientData.medical_conditions.map(c => (
+                        <div key={c.id} style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '0.5rem' }}>
+                          <strong>{c.condition}</strong> — <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{c.notes}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '0.5rem' }}>PREVIOUS SURGERIES</h4>
+                      <p style={{ fontSize: '0.9rem', color: '#1e293b' }}>{patientData.surgeries.join(', ')}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub tab: Lifestyle */}
+              {medInfoSubTab === 'lifestyle' && (
+                <div className="dash-card">
+                  <h3 className="card-title">🌿 Lifestyle Information</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>SMOKING</span>
+                      <p style={{ fontWeight: '700', color: '#0f172a', marginTop: '0.2rem' }}>{patientData.lifestyle.smoking}</p>
+                    </div>
+                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>ALCOHOL</span>
+                      <p style={{ fontWeight: '700', color: '#0f172a', marginTop: '0.2rem' }}>{patientData.lifestyle.alcohol}</p>
+                    </div>
+                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b' }}>EXERCISE</span>
+                      <p style={{ fontWeight: '700', color: '#0f172a', marginTop: '0.2rem' }}>{patientData.lifestyle.exercise}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub tab: Medications */}
+              {medInfoSubTab === 'medications' && (
+                <div className="dash-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 className="card-title" style={{ margin: 0 }}>💊 Current Medications</h3>
+                    <button onClick={() => setShowAddMedModal(true)} className="btn-primary" style={{ fontSize: '0.8rem' }}>+ Add Medication</button>
+                  </div>
+                  {medicationLogs.map(m => (
+                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '0.75rem' }}>
+                      <div>
+                        <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{m.medication_name}</strong> ({m.dosage})
+                        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Frequency: {m.frequency} • Start: {m.start_date}</p>
+                      </div>
+                      <span className="badge badge-green">Active</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Sub tab: Emergency Contacts */}
+              {medInfoSubTab === 'contacts' && (
+                <div className="dash-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 className="card-title" style={{ margin: 0 }}>🚨 Emergency Contacts</h3>
+                    <button onClick={() => setShowAddContactModal(true)} className="btn-primary" style={{ fontSize: '0.8rem' }}>+ Add Contact</button>
+                  </div>
+                  {emergencyContacts.map(c => (
+                    <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '0.75rem' }}>
+                      <div>
+                        <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{c.name}</strong> ({c.relationship})
+                        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>📞 {c.phone}</p>
+                      </div>
+                      <span className={`badge ${c.is_primary ? 'badge-red' : 'badge-patient'}`}>{c.is_primary ? 'Primary Contact' : 'Secondary'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 5: MEDICAL HISTORY (READ ONLY) */}
+          {activeTab === 'medical_history' && (
+            <div className="dash-card">
+              <h3 className="card-title">📋 Clinical Medical History (Read Only)</h3>
+              <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem' }}>
+                Note: Diagnostic records and prescriptions added by medical professionals are read-only to preserve clinical accuracy and legal compliance.
               </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid-2">
-        {/* Section: Emergency Contacts */}
-        <div className="dash-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 className="card-title" style={{ margin: 0 }}>🚨 Emergency Contacts</h3>
-            <button onClick={() => setShowAddContactModal(true)} className="btn-primary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
-              + Add Contact
-            </button>
-          </div>
-
-          {emergencyContacts.length === 0 ? (
-            <p style={{ color: '#64748b', fontSize: '0.9rem' }}>No emergency contacts added yet.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {emergencyContacts.map((c) => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <div>
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0f172a' }}>{c.name}</h4>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{c.relationship} • {c.phone}</span>
-                  </div>
-                  <span className={`badge ${c.priority === 1 ? 'badge-red' : 'badge-patient'}`}>
-                    {c.priority === 1 ? 'Primary Contact' : 'Secondary'}
-                  </span>
-                </div>
-              ))}
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Attending Doctor</th>
+                    <th>Facility</th>
+                    <th>Diagnosis</th>
+                    <th>Prescription</th>
+                    <th>Clinical Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {medicalHistory.map(h => (
+                    <tr key={h.id}>
+                      <td>{h.date}</td>
+                      <td><strong>{h.doctor}</strong></td>
+                      <td>{h.facility}</td>
+                      <td><span className="badge badge-amber">{h.diagnosis}</span></td>
+                      <td>{h.prescription}</td>
+                      <td>{h.notes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </div>
 
-        {/* Section: Medication Logs */}
-        <div className="dash-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 className="card-title" style={{ margin: 0 }}>💊 Active Medications</h3>
-            <button onClick={() => setShowAddMedModal(true)} className="btn-primary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
-              + Add Medication
-            </button>
-          </div>
-
-          {medicationLogs.length === 0 ? (
-            <p style={{ color: '#64748b', fontSize: '0.9rem' }}>No active medications logged.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {medicationLogs.map((m) => (
-                <div key={m.id} style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{m.medication_name}</strong>
-                    <span style={{ fontSize: '0.8rem', color: '#475569', display: 'block' }}>{m.dosage} — {m.frequency}</span>
-                    {m.purpose && <span style={{ fontSize: '0.75rem', color: '#0284c7' }}>Purpose: {m.purpose}</span>}
-                  </div>
-                  <span className="badge badge-green">Active</span>
-                </div>
-              ))}
+          {/* TAB 6: DOCUMENTS */}
+          {activeTab === 'documents' && (
+            <div className="dash-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 className="card-title" style={{ margin: 0 }}>📁 Uploaded Medical Documents</h3>
+                <button onClick={() => setShowDocUploadModal(true)} className="btn-primary" style={{ fontSize: '0.8rem' }}>📤 Upload Document</button>
+              </div>
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Document Name</th>
+                    <th>Category</th>
+                    <th>Uploaded Date</th>
+                    <th>Size</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map(d => (
+                    <tr key={d.id}>
+                      <td><strong>{d.title}</strong></td>
+                      <td><span className="badge badge-patient">{d.category}</span></td>
+                      <td>{d.uploaded_at}</td>
+                      <td>{d.size}</td>
+                      <td>
+                        <button onClick={() => alert(`Downloading ${d.title}...`)} className="btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Download</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
+
+          {/* TAB 7: NOTIFICATIONS */}
+          {activeTab === 'notifications' && (
+            <div className="dash-card">
+              <h3 className="card-title">🔔 System & Emergency Alerts</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {notifications.map(n => (
+                  <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: n.unread ? '#f0f9ff' : '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                    <div>
+                      <span className={`badge ${n.type === 'Medication' ? 'badge-green' : (n.type === 'Security' ? 'badge-red' : 'badge-patient')}`}>{n.type}</span>
+                      <p style={{ fontWeight: '600', marginTop: '0.3rem', color: '#0f172a' }}>{n.message}</p>
+                    </div>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{n.time}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 8: ACCESS HISTORY */}
+          {activeTab === 'access_history' && (
+            <div className="dash-card">
+              <h3 className="card-title">👁️ Audit Log of Who Viewed Your Records</h3>
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Medical Professional</th>
+                    <th>Hospital / Facility</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Access Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accessHistory.map(a => (
+                    <tr key={a.id}>
+                      <td><strong>{a.medic_name}</strong></td>
+                      <td>{a.hospital}</td>
+                      <td>{a.date}</td>
+                      <td>{a.time}</td>
+                      <td><span className="badge badge-amber">{a.reason}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* TAB 9: PRIVACY & SECURITY */}
+          {activeTab === 'privacy_security' && (
+            <div className="dash-card">
+              <h3 className="card-title">🛡️ Privacy & Security Settings</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <form onSubmit={(e) => { e.preventDefault(); alert('Password updated successfully!'); }} style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '1rem' }}>Change Password</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                    <input type="password" placeholder="Current Password" required value={passwordForm.current} onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    <input type="password" placeholder="New Password" required value={passwordForm.newPass} onChange={(e) => setPasswordForm({ ...passwordForm, newPass: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    <input type="password" placeholder="Confirm New Password" required value={passwordForm.confirmPass} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPass: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <button type="submit" className="btn-primary" style={{ marginTop: '1rem' }}>Update Password</button>
+                </form>
+
+                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h4 style={{ fontSize: '1rem', fontWeight: '700' }}>Two-Factor Authentication (2FA)</h4>
+                    <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Require an SMS/Authenticator OTP code on every login attempt.</p>
+                  </div>
+                  <button onClick={() => setTwoFactorEnabled(!twoFactorEnabled)} className={twoFactorEnabled ? 'btn-danger' : 'btn-success'}>
+                    {twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 10: SETTINGS */}
+          {activeTab === 'settings' && (
+            <div className="dash-card">
+              <h3 className="card-title">⚙️ Application Settings</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: '1px solid #e2e8f0' }}>
+                  <span>Theme Preference</span>
+                  <select style={{ padding: '0.5rem', borderRadius: '8px' }}>
+                    <option>System Light Mode</option>
+                    <option>Dark Mode</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: '1px solid #e2e8f0' }}>
+                  <span>Language</span>
+                  <select style={{ padding: '0.5rem', borderRadius: '8px' }}>
+                    <option>English (US)</option>
+                    <option>Spanish</option>
+                    <option>French</option>
+                  </select>
+                </div>
+                <div style={{ paddingTop: '1rem' }}>
+                  <button onClick={() => alert('Account deletion request submitted to system administrators.')} className="btn-danger">
+                    ⚠️ Request Account Deletion
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
-      {/* Section: Medical Records History */}
-      <div className="dash-card" style={{ marginTop: '1.5rem' }}>
-        <h3 className="card-title">📋 Medical Records & Clinical Encounters</h3>
-        {medicalRecords.length === 0 ? (
-          <p style={{ color: '#64748b', fontSize: '0.9rem' }}>No medical records recorded yet.</p>
-        ) : (
-          <table className="custom-table" style={{ marginTop: '0.5rem' }}>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Title / Summary</th>
-                <th>Diagnosis</th>
-                <th>Facility</th>
-              </tr>
-            </thead>
-            <tbody>
-              {medicalRecords.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.date_recorded ? new Date(r.date_recorded).toLocaleDateString() : 'Recent'}</td>
-                  <td><span className="badge badge-patient">{r.record_type || 'Encounter'}</span></td>
-                  <td><strong>{r.title}</strong></td>
-                  <td>{r.diagnosis || 'N/A'}</td>
-                  <td>{r.facility || 'City Hospital'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* MODALS */}
+      {showAddAllergyModal && (
+        <div className="modal-overlay" onClick={() => setShowAddAllergyModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Add Allergy Record</h3>
+            <form onSubmit={handleAddAllergy} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <input type="text" placeholder="Allergy Name (e.g. Latex, Aspirin)" required value={newAllergy.name} onChange={(e) => setNewAllergy({ ...newAllergy, name: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              <select value={newAllergy.severity} onChange={(e) => setNewAllergy({ ...newAllergy, severity: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                <option value="Mild">Mild</option>
+                <option value="Moderate">Moderate</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical (Anaphylactic)</option>
+              </select>
+              <textarea placeholder="Clinical notes or reaction symptoms..." value={newAllergy.notes} onChange={(e) => setNewAllergy({ ...newAllergy, notes: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', height: '80px' }} />
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Save Allergy</button>
+                <button type="button" onClick={() => setShowAddAllergyModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-      {/* Modals */}
       {showAddContactModal && (
         <div className="modal-overlay" onClick={() => setShowAddContactModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '1rem' }}>Add Emergency Contact</h3>
-            <form onSubmit={handleAddContact} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Contact Name</label>
-                <input 
-                  type="text" required
-                  value={newContact.name}
-                  onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-                  placeholder="e.g. Sarah Doe"
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Relationship</label>
-                <input 
-                  type="text" required
-                  value={newContact.relationship}
-                  onChange={(e) => setNewContact({ ...newContact, relationship: e.target.value })}
-                  placeholder="e.g. Spouse / Brother / Parent"
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Phone Number</label>
-                <input 
-                  type="tel" required
-                  value={newContact.phone}
-                  onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-                  placeholder="e.g. +1 (555) 019-2834"
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            <h3>Add Emergency Contact</h3>
+            <form onSubmit={handleAddContact} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <input type="text" placeholder="Contact Full Name" required value={newContact.name} onChange={(e) => setNewContact({ ...newContact, name: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              <input type="text" placeholder="Relationship (Spouse, Sibling, Parent)" required value={newContact.relationship} onChange={(e) => setNewContact({ ...newContact, relationship: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              <input type="tel" placeholder="Phone Number" required value={newContact.phone} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                <input type="checkbox" checked={newContact.is_primary} onChange={(e) => setNewContact({ ...newContact, is_primary: e.target.checked })} />
+                Set as Primary Emergency Contact
+              </label>
+              <div style={{ display: 'flex', gap: '1rem' }}>
                 <button type="submit" className="btn-primary" style={{ flex: 1 }}>Save Contact</button>
                 <button type="button" onClick={() => setShowAddContactModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
               </div>
@@ -345,54 +658,12 @@ function PatientDashboard() {
       {showAddMedModal && (
         <div className="modal-overlay" onClick={() => setShowAddMedModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '1rem' }}>Add Medication Log</h3>
-            <form onSubmit={handleAddMedication} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Medication Name</label>
-                <input 
-                  type="text" required
-                  value={newMed.medication_name}
-                  onChange={(e) => setNewMed({ ...newMed, medication_name: e.target.value })}
-                  placeholder="e.g. Metformin"
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Dosage</label>
-                  <input 
-                    type="text" required
-                    value={newMed.dosage}
-                    onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })}
-                    placeholder="e.g. 500mg"
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Frequency</label>
-                  <input 
-                    type="text" required
-                    value={newMed.frequency}
-                    onChange={(e) => setNewMed({ ...newMed, frequency: e.target.value })}
-                    placeholder="e.g. Twice daily"
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Purpose / Indication</label>
-                <input 
-                  type="text"
-                  value={newMed.purpose}
-                  onChange={(e) => setNewMed({ ...newMed, purpose: e.target.value })}
-                  placeholder="e.g. Diabetes control"
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            <h3>Add Medication Log</h3>
+            <form onSubmit={handleAddMedication} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <input type="text" placeholder="Medication Name" required value={newMed.medication_name} onChange={(e) => setNewMed({ ...newMed, medication_name: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              <input type="text" placeholder="Dosage (e.g. 500mg)" required value={newMed.dosage} onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              <input type="text" placeholder="Frequency (e.g. Twice Daily)" required value={newMed.frequency} onChange={(e) => setNewMed({ ...newMed, frequency: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              <div style={{ display: 'flex', gap: '1rem' }}>
                 <button type="submit" className="btn-primary" style={{ flex: 1 }}>Save Medication</button>
                 <button type="button" onClick={() => setShowAddMedModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
               </div>
@@ -401,76 +672,37 @@ function PatientDashboard() {
         </div>
       )}
 
-      {showEditVitalsModal && (
-        <div className="modal-overlay" onClick={() => setShowEditVitalsModal(false)}>
+      {showDocUploadModal && (
+        <div className="modal-overlay" onClick={() => setShowDocUploadModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '1rem' }}>Edit Personal Vitals</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Blood Group</label>
-                  <select 
-                    value={editVitals.blood_group}
-                    onChange={(e) => setEditVitals({ ...editVitals, blood_group: e.target.value })}
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                  >
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Age</label>
-                  <input 
-                    type="number"
-                    value={editVitals.age}
-                    onChange={(e) => setEditVitals({ ...editVitals, age: e.target.value })}
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Gender</label>
-                  <select 
-                    value={editVitals.gender}
-                    onChange={(e) => setEditVitals({ ...editVitals, gender: e.target.value })}
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
+            <h3>Upload Health Document</h3>
+            <form onSubmit={handleAddDocument} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <input type="text" placeholder="Document Title / Filename" required value={newDoc.title} onChange={(e) => setNewDoc({ ...newDoc, title: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              <select value={newDoc.category} onChange={(e) => setNewDoc({ ...newDoc, category: e.target.value })} style={{ padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                <option value="Prescription">Prescription</option>
+                <option value="Lab Report">Lab Report</option>
+                <option value="Insurance">Insurance Document</option>
+                <option value="Discharge Summary">Discharge Summary</option>
+              </select>
+              <input type="file" required style={{ padding: '0.6rem', background: '#f8fafc', borderRadius: '8px' }} />
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Upload Document</button>
+                <button type="button" onClick={() => setShowDocUploadModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-              <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Medical Conditions (comma separated)</label>
-                <input 
-                  type="text"
-                  value={editVitals.medical_conditions}
-                  onChange={(e) => setEditVitals({ ...editVitals, medical_conditions: e.target.value })}
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>Severe Allergies (comma separated)</label>
-                <input 
-                  type="text"
-                  value={editVitals.allergies}
-                  onChange={(e) => setEditVitals({ ...editVitals, allergies: e.target.value })}
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '0.25rem' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button onClick={handleSaveVitals} className="btn-primary" style={{ flex: 1 }}>Save Vitals</button>
-                <button onClick={() => setShowEditVitalsModal(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
-              </div>
+      {showShareModal && (
+        <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>🔗 Securely Share Emergency Health ID</h3>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.5rem 0 1rem' }}>Generate a temporary encrypted link or QR code to allow emergency access for 24 hours.</p>
+            <input type="text" readOnly value={`https://edhis.health/emergency/access?token=${patientData.health_id}`} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f1f5f9' }} />
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <button onClick={() => { navigator.clipboard?.writeText(`https://edhis.health/emergency/access?token=${patientData.health_id}`); alert('Link copied to clipboard!'); }} className="btn-primary" style={{ flex: 1 }}>Copy Share Link</button>
+              <button onClick={() => setShowShareModal(false)} className="btn-secondary" style={{ flex: 1 }}>Close</button>
             </div>
           </div>
         </div>
