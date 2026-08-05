@@ -29,16 +29,16 @@ const seedUsers = async () => {
          VALUES (?, ?, ?, ?, NOW(), NOW())`,
         ['auth_admin_001', 'admin', 'admin@edhis.com', hashedPassword]
       );
-
+    }
+    const [adminSetting] = await query('SELECT id FROM admin_settings WHERE auth_id = ?', ['auth_admin_001']);
+    if (!adminSetting) {
       await query(
         `INSERT INTO admin_settings (auth_id, full_name, permissions, created_at, updated_at)
          VALUES (?, ?, ?, NOW(), NOW())`,
         ['auth_admin_001', 'System Administrator', 
          JSON.stringify({ canManageUsers: true, canViewAnalytics: true, canModifySettings: true })]
       );
-      console.log('✅ Admin user created: admin@edhis.com');
-    } else {
-      console.log('ℹ️  Admin user already exists');
+      console.log('✅ Admin user & settings created: admin@edhis.com');
     }
 
     // 2. Create Test Patient
@@ -49,7 +49,9 @@ const seedUsers = async () => {
          VALUES (?, ?, ?, ?, NOW(), NOW())`,
         ['auth_patient_001', 'patient', 'patient@test.com', hashedPassword]
       );
-
+    }
+    const [patientRow] = await query('SELECT id FROM patients WHERE auth_id = ?', ['auth_patient_001']);
+    if (!patientRow) {
       await query(
         `INSERT INTO patients (
           auth_id, health_id, full_name, date_of_birth, age, gender, blood_group,
@@ -69,10 +71,7 @@ const seedUsers = async () => {
           true
         ]
       );
-      console.log('✅ Patient user created: patient@test.com');
-      console.log('   Health ID: EMH-100001');
-    } else {
-      console.log('\nℹ️  Patient user already exists');
+      console.log('✅ Patient user details created: patient@test.com (EMH-100001)');
     }
 
     // 3. Create Test Medic
@@ -83,7 +82,9 @@ const seedUsers = async () => {
          VALUES (?, ?, ?, ?, NOW(), NOW())`,
         ['auth_medic_001', 'medic', 'medic@test.com', hashedPassword]
       );
-
+    }
+    const [medicRow] = await query('SELECT id FROM medics WHERE auth_id = ?', ['auth_medic_001']);
+    if (!medicRow) {
       await query(
         `INSERT INTO medics (
           auth_id, full_name, email, specialization, license_number, qualification,
@@ -102,9 +103,7 @@ const seedUsers = async () => {
           true
         ]
       );
-      console.log('✅ Medic user created: medic@test.com');
-    } else {
-      console.log('\nℹ️  Medic user already exists');
+      console.log('✅ Medic user details created: medic@test.com');
     }
 
     // 4. Create Additional Test Patient
@@ -116,7 +115,9 @@ const seedUsers = async () => {
          VALUES (?, ?, ?, ?, NOW(), NOW())`,
         ['auth_patient_002', 'patient', 'jane@test.com', hashedPassword]
       );
-
+    }
+    const [janeRow] = await query('SELECT id FROM patients WHERE auth_id = ?', ['auth_patient_002']);
+    if (!janeRow) {
       await query(
         `INSERT INTO patients (
           auth_id, health_id, full_name, date_of_birth, age, gender, blood_group,
@@ -136,10 +137,7 @@ const seedUsers = async () => {
           true
         ]
       );
-      console.log('✅ Patient user created: jane@test.com');
-      console.log('   Health ID: EMH-100002');
-    } else {
-      console.log('\nℹ️  Additional patient user already exists');
+      console.log('✅ Patient user details created: jane@test.com (EMH-100002)');
     }
 
     // Display summary

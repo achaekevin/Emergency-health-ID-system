@@ -12,6 +12,7 @@ import medicalRecordRoutes from './routes/medicalRecordRoutes.js';
 import medicationLogRoutes from './routes/medicationLogRoutes.js';
 import academicDocRoutes from './routes/academicDocRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use('/uploads', express.static('uploads'));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/analytics', analyticRoutes);
 app.use('/api/emergency-contacts', emergencyContactRoutes);

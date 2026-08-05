@@ -12,19 +12,20 @@ function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleLoginSubmit = async (loginEmail, loginPassword) => {
     setError('');
     setLoading(true);
 
     try {
-      // Make API call to login endpoint
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: loginEmail.trim().toLowerCase(),
+          password: loginPassword,
+        }),
       });
 
       const data = await response.json();
@@ -33,14 +34,13 @@ function Login() {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store user data in Redux
+      // Store user data in Redux & localStorage
       dispatch(setUser({
         user: data.user,
         token: data.token,
         isAuthenticated: true,
       }));
 
-      // Store token in localStorage
       localStorage.setItem('token', data.token);
 
       // Redirect based on user role
@@ -48,8 +48,10 @@ function Login() {
         navigate('/patient/dashboard');
       } else if (data.user.role === 'medic') {
         navigate('/medic/dashboard');
+      } else if (data.user.role === 'admin') {
+        navigate('/admin/dashboard');
       } else {
-        navigate('/setup');
+        navigate('/');
       }
     } catch (err) {
       setError(err.message || 'An error occurred during login');
@@ -58,12 +60,28 @@ function Login() {
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleLoginSubmit(email, password);
+  };
+
+  const handleQuickLogin = (demoEmail, demoPassword) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    handleLoginSubmit(demoEmail, demoPassword);
+  };
+
   return (
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Welcome Back</h1>
-          <p>Sign in to your Emergency Health ID account</p>
+          <div className="auth-logo-badge">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M12 2v20M2 12h20" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <h1>Emergency Health ID</h1>
+          <p>Sign in to access your role-based health portal</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
@@ -110,6 +128,90 @@ function Login() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        {/* Quick Demo Login Cards */}
+        <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', textAlign: 'center' }}>
+            ⚡ Quick Test Logins
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.6rem' }}>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('admin@edhis.com', 'Password123')}
+              disabled={loading}
+              style={{
+                padding: '0.55rem',
+                borderRadius: '8px',
+                border: '1px solid #c084fc',
+                background: '#faf5ff',
+                color: '#6b21a8',
+                fontWeight: '700',
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              👑 Admin Account
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('medic@test.com', 'Password123')}
+              disabled={loading}
+              style={{
+                padding: '0.55rem',
+                borderRadius: '8px',
+                border: '1px solid #34d399',
+                background: '#f0fdf4',
+                color: '#15803d',
+                fontWeight: '700',
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              🩺 Medic Professional
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('patient@test.com', 'Password123')}
+              disabled={loading}
+              style={{
+                padding: '0.55rem',
+                borderRadius: '8px',
+                border: '1px solid #38bdf8',
+                background: '#f0f9ff',
+                color: '#0369a1',
+                fontWeight: '700',
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              👤 Patient (John Doe)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('jane@test.com', 'Password123')}
+              disabled={loading}
+              style={{
+                padding: '0.55rem',
+                borderRadius: '8px',
+                border: '1px solid #38bdf8',
+                background: '#f0f9ff',
+                color: '#0369a1',
+                fontWeight: '700',
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              👩 Patient (Jane Smith)
+            </button>
+          </div>
+        </div>
 
         <div className="auth-footer">
           <p>

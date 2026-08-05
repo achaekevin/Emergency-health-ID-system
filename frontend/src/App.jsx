@@ -1,18 +1,21 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import Navbar from './components/Navbar';
 import Login from './components/Login';
 import Register from './components/Register';
 import PatientDashboard from './components/PatientDashboard';
 import MedicDashboard from './components/MedicDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import WelcomeSetup from './components/WelcomeSetup';
 import QRScanner from './components/QRScanner';
 import Documentation from './components/Documentation';
 import OAuthCallback from './components/OAuthCallback';
+import EmergencyPatientView from './components/EmergencyPatientView';
 
 function App() {
   const { user, isAuthenticated } = useSelector((state) => state.auth || {});
 
-  // Protected Route wrapper
+  // Protected Route wrapper with Navbar header
   const ProtectedRoute = ({ children, allowedRoles }) => {
     if (!isAuthenticated) {
       return <Navigate to="/login" replace />;
@@ -22,12 +25,22 @@ function App() {
       return <Navigate to="/" replace />;
     }
 
-    return children;
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Navbar />
+        <main style={{ flex: 1 }}>
+          {children}
+        </main>
+      </div>
+    );
   };
 
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* Public Emergency Scan Route */}
+      <Route path="/emergency/:healthId" element={<EmergencyPatientView />} />
+
+      {/* Public Auth Routes */}
       <Route 
         path="/login" 
         element={
@@ -42,13 +55,14 @@ function App() {
       />
       <Route path="/auth/callback" element={<OAuthCallback />} />
 
-      {/* Protected Routes */}
+      {/* Default Root Redirect based on Role */}
       <Route
         path="/"
         element={
           <ProtectedRoute>
             {user?.role === 'patient' && <PatientDashboard />}
             {user?.role === 'medic' && <MedicDashboard />}
+            {user?.role === 'admin' && <AdminDashboard />}
             {!user?.role && <Navigate to="/setup" replace />}
           </ProtectedRoute>
         }
@@ -77,6 +91,15 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={['medic']}>
             <MedicDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminDashboard />
           </ProtectedRoute>
         }
       />

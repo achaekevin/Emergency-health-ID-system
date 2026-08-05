@@ -103,19 +103,20 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
 
     // Validation
-    if (!email || !password) {
+    if (!cleanEmail || !password) {
       return res.status(400).json({
         success: false,
         message: 'Email and password are required'
       });
     }
 
-    // Find user
+    // Find user by normalized email
     const [user] = await query(
-      'SELECT * FROM profiles WHERE email = ?',
-      [email]
+      'SELECT * FROM profiles WHERE LOWER(TRIM(email)) = ?',
+      [cleanEmail]
     );
 
     if (!user) {
@@ -136,26 +137,41 @@ router.post('/login', async (req, res) => {
     }
 
     // Get role-specific details
-    let fullName = email;
+    let fullName = cleanEmail;
     let profileId = null;
+    let extraData = {};
 
     if (user.role === 'patient') {
       const [patient] = await query(
-        'SELECT id, full_name FROM patients WHERE auth_id = ?',
+        'SELECT * FROM patients WHERE auth_id = ?',
         [user.auth_id]
       );
       if (patient) {
-        fullName = patient.full_name;
+        fullName = patient.full_name || cleanEmail;
         profileId = patient.id;
+        extraData = patient;
       }
     } else if (user.role === 'medic') {
       const [medic] = await query(
-        'SELECT id, full_name FROM medics WHERE auth_id = ?',
+        'SELECT * FROM medics WHERE auth_id = ?',
         [user.auth_id]
       );
       if (medic) {
-        fullName = medic.full_name;
+        fullName = medic.full_name || cleanEmail;
         profileId = medic.id;
+        extraData = medic;
+      }
+    } else if (user.role === 'admin') {
+      const [admin] = await query(
+        'SELECT * FROM admin_settings WHERE auth_id = ?',
+        [user.auth_id]
+      );
+      if (admin) {
+        fullName = admin.full_name || 'System Administrator';
+        profileId = admin.id;
+        extraData = admin;
+      } else {
+        fullName = 'System Administrator';
       }
     }
 
@@ -166,12 +182,16 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    // Log audit
-    await query(
-      `INSERT INTO audit_logs (user_id, user_type, action, status, ip_address, timestamp)
-       VALUES (?, ?, 'login', 'success', ?, NOW())`,
-      [user.auth_id, user.role, req.ip]
-    );
+    // Try logging audit log safely
+    try {
+      await query(
+        `INSERT INTO audit_logs (user_id, user_type, action, status, ip_address, timestamp)
+         VALUES (?, ?, 'login', 'success', ?, NOW())`,
+        [user.auth_id, user.role, req.ip || '127.0.0.1']
+      );
+    } catch (auditErr) {
+      console.warn('Could not record audit log:', auditErr.message);
+    }
 
     res.json({
       success: true,
@@ -182,7 +202,8 @@ router.post('/login', async (req, res) => {
         email: user.email,
         fullName,
         role: user.role,
-        profileId
+        profileId,
+        ...extraData
       }
     });
   } catch (error) {
